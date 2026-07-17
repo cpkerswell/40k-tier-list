@@ -28,17 +28,21 @@ export function MatchupMatrix({ groupSlug, isGlobal, factions }: MatchupMatrixPr
     setSelectedIds(toggleMatrixFaction(groupSlug, factionId))
   }
 
-  const selectedFactions = selectedIds
+  // Rows are the picked factions; columns are every faction in the pool, so
+  // each pick is measured against the whole field rather than just the other
+  // picks.
+  const rowFactions = selectedIds
     .map((id) => factions.find((faction) => faction.id === id))
     .filter((faction): faction is Faction => Boolean(faction))
+  const columnFactions = [...factions].sort((a, b) => b.elo_rating - a.elo_rating)
 
   return (
     <div className="matrix-section">
       <h2 className="matrix-section__title">Matchup Matrix</h2>
       <p className="matrix-section__intro">
-        Pick factions to compare head-to-head. Green means a strong match-up, red means weak,
-        based on actual votes between that pair — or an Elo-projected estimate (dashed border)
-        when they haven't faced off yet.
+        Pick factions to see how they stack up against every other faction. Green means a strong
+        match-up, red means weak, based on actual votes between that pair — or an Elo-projected
+        estimate (dashed border) when they haven't faced off yet.
       </p>
 
       {TYPE_ORDER.map((type) => {
@@ -75,11 +79,11 @@ export function MatchupMatrix({ groupSlug, isGlobal, factions }: MatchupMatrixPr
         )
       })}
 
-      {selectedFactions.length < 2 && (
-        <p className="status-message">Pick at least two factions to see the matrix.</p>
+      {rowFactions.length === 0 && (
+        <p className="status-message">Pick at least one faction to see the matrix.</p>
       )}
 
-      {selectedFactions.length >= 2 && (
+      {rowFactions.length > 0 && (
         <>
           {loading && <p className="status-message">Loading matchups...</p>}
           {error && <p className="status-message status-message--error">{error}</p>}
@@ -89,7 +93,7 @@ export function MatchupMatrix({ groupSlug, isGlobal, factions }: MatchupMatrixPr
                 <thead>
                   <tr>
                     <th className="matrix-table__corner" />
-                    {selectedFactions.map((colFaction) => {
+                    {columnFactions.map((colFaction) => {
                       const theme = getFactionTheme(colFaction)
                       const style: AccentStyle = {
                         '--accent': theme.color,
@@ -104,7 +108,7 @@ export function MatchupMatrix({ groupSlug, isGlobal, factions }: MatchupMatrixPr
                   </tr>
                 </thead>
                 <tbody>
-                  {selectedFactions.map((rowFaction) => {
+                  {rowFactions.map((rowFaction) => {
                     const rowTheme = getFactionTheme(rowFaction)
                     const rowStyle: AccentStyle = {
                       '--accent': rowTheme.color,
@@ -116,7 +120,7 @@ export function MatchupMatrix({ groupSlug, isGlobal, factions }: MatchupMatrixPr
                           <FactionIcon icon={rowTheme.icon} className="matrix-table__header-icon" />
                           <span>{rowFaction.name}</span>
                         </th>
-                        {selectedFactions.map((colFaction) => {
+                        {columnFactions.map((colFaction) => {
                           if (rowFaction.id === colFaction.id) {
                             return (
                               <td key={colFaction.id} className="matrix-cell matrix-cell--self">

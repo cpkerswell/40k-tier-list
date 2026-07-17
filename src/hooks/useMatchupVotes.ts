@@ -9,22 +9,23 @@ interface UseMatchupVotesResult {
 }
 
 /**
- * Fetches every recorded vote where BOTH sides are within `factionIds` — the
- * raw material for the head-to-head matrix. Needs at least two factions
- * selected; refetches whenever the selection or scope changes.
+ * Fetches every recorded vote involving at least one of `rowFactionIds` — the
+ * raw material for the matrix, where rows are the picked factions and columns
+ * are every faction in the pool. Needs at least one faction selected;
+ * refetches whenever the selection or scope changes.
  */
 export function useMatchupVotes(
   groupSlug: string,
   isGlobal: boolean,
-  factionIds: string[],
+  rowFactionIds: string[],
 ): UseMatchupVotesResult {
   const [votes, setVotes] = useState<HeadToHeadVote[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const idsKey = [...factionIds].sort().join(',')
+  const idsKey = [...rowFactionIds].sort().join(',')
 
   useEffect(() => {
-    if (factionIds.length < 2) {
+    if (rowFactionIds.length === 0) {
       setVotes([])
       setError(null)
       return
@@ -34,11 +35,11 @@ export function useMatchupVotes(
     setLoading(true)
 
     async function load() {
+      const idList = rowFactionIds.join(',')
       let query = supabase
         .from('votes')
         .select('winner_id, loser_id')
-        .in('winner_id', factionIds)
-        .in('loser_id', factionIds)
+        .or(`winner_id.in.(${idList}),loser_id.in.(${idList})`)
 
       if (!isGlobal) query = query.eq('group_slug', groupSlug)
 
@@ -59,7 +60,7 @@ export function useMatchupVotes(
     return () => {
       active = false
     }
-    // factionIds is represented by idsKey to avoid refetching on every
+    // rowFactionIds is represented by idsKey to avoid refetching on every
     // re-render when the caller passes a fresh array with the same contents.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [groupSlug, isGlobal, idsKey])
