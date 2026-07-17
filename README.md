@@ -49,7 +49,39 @@ VITE_SUPABASE_ANON_KEY=your-anon-public-key
 never get committed. Never put the **service_role** key in this file or anywhere
 in the frontend — it bypasses row-level security entirely.
 
-## 3. Run it
+## 3. Applying database changes (Supabase CLI)
+
+Instead of copy-pasting SQL into the dashboard's SQL Editor every time, link
+this repo to your project once and push future migrations with one command.
+
+Run these yourself — they need your own Supabase login and database password,
+so this part can't be scripted for you:
+
+```sh
+npx supabase login
+npx supabase link --project-ref wzojscflhlyxbefejxip
+npx supabase db pull
+```
+
+- `login` opens a browser to authenticate the CLI with your Supabase account.
+- `link` connects this repo to the project — it'll ask for the database
+  password you set when creating it.
+- `db pull` snapshots the project's current schema into `supabase/migrations/`
+  and marks it as already applied, so a later `db push` won't try to replay
+  everything from scratch.
+
+From then on:
+
+- `npm run db:new-migration <name>` creates a new timestamped file under
+  `supabase/migrations/`.
+- `npm run db:push` applies any migrations that haven't been run yet against
+  the linked project.
+
+The old workflow — pasting `schema.sql` / `seed.sql` / the numbered files
+below into the SQL Editor by hand — still works fine if you'd rather not
+install the CLI.
+
+## 4. Run it
 
 ```sh
 npm install
@@ -81,17 +113,27 @@ the LAN address it prints instead.
 ```
 src/
   lib/
-    supabaseClient.ts   Supabase client, reads env vars
-    pairing.ts          picks the next match-up
+    supabaseClient.ts    Supabase client, reads env vars
+    pairing.ts           picks the next match-up (nearest-rank, preference-first)
     voteHistory.ts       localStorage-backed repeat-vote guard
+    preferences.ts       localStorage-backed "factions I know" set
+    identity.ts          localStorage-backed voter display name
     tiers.ts             Elo -> S/A/B/C/D bucketing
+    factionTheme.ts      per-faction color + icon
+    relativeTime.ts      "3m ago" formatting for the feed
   hooks/
     useFactions.ts       fetches + refetches factions sorted by Elo
   components/
     FactionCard.tsx
     VoteView.tsx
+    PreferencesView.tsx  "Factions" tab — mark which ones you know
     TierListView.tsx
+    ActivityFeed.tsx     "Feed" tab — live votes via Supabase Realtime
+    VoterNameControl.tsx
+    icons.tsx            original SVG glyphs per faction
 supabase/
   schema.sql             tables, RLS policies, record_vote() function
   seed.sql                current tabletop factions
+  migrations/             incremental changes; superseded once db pull baselines them
+  config.toml             Supabase CLI project config
 ```

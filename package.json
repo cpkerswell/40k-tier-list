@@ -7,7 +7,10 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "db:push": "supabase db push",
+    "db:pull": "supabase db pull",
+    "db:new-migration": "supabase migration new"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.110.7",
@@ -20,6 +23,7 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.3",
     "oxlint": "^1.71.0",
+    "supabase": "^2.109.1",
     "typescript": "~6.0.2",
     "vite": "^8.1.1"
   }
