@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { MatchupSelection } from '../lib/pairing'
-import { pickNextMatchup } from '../lib/pairing'
+import { pickNextMatchup, pickRandomMatchup } from '../lib/pairing'
 import { assignTiers } from '../lib/tiers'
 import { supabase } from '../lib/supabaseClient'
 import {
@@ -55,11 +55,17 @@ export function VoteView({
   const [impact, setImpact] = useState<VoteImpact | null>(null)
   const pendingImpactRef = useRef<PendingImpact | null>(null)
 
+  // Deliberately doesn't depend on championId/championSlot: those are only
+  // ever set alongside a factions/knownFactionIds change (a real vote) or
+  // handled with an explicit setSelection of their own (draw, shuffle).
+  // Watching them here too would re-run this right after e.g. shuffle resets
+  // championId, clobbering the manual pick with a fresh priority-based one.
   useEffect(() => {
     if (factions.length >= 2) {
       setSelection(pickNextMatchup(factions, knownFactionIds, championId, championSlot))
     }
-  }, [factions, knownFactionIds, championId, championSlot])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [factions, knownFactionIds])
 
   // Fires once `factions` has been refetched after a vote, so we can compare
   // tier placement before vs. after using the freshly recalculated Elo order.
@@ -135,6 +141,16 @@ export function VoteView({
     setSelection(pickNextMatchup(factions, knownFactionIds, championId, championSlot))
   }
 
+  function handleShuffle() {
+    if (submitting) return
+    // Doesn't record anything — drops the current champion streak (if any)
+    // and ignores known-faction priority entirely, so it actually breaks
+    // away from a faction the phase order keeps resurfacing.
+    setChampionId(null)
+    const randomPair = pickRandomMatchup(factions)
+    setSelection(randomPair ? { matchup: randomPair, isBothKnown: true } : null)
+  }
+
   if (loading) {
     return <p className="status-message">Summoning the factions...</p>
   }
@@ -172,9 +188,14 @@ export function VoteView({
           onSelect={() => handleVote(factionB, factionA)}
         />
       </div>
-      <button type="button" className="draw-bar" disabled={submitting} onClick={handleDraw}>
-        Draw / not sure
-      </button>
+      <div className="secondary-actions">
+        <button type="button" className="draw-bar" disabled={submitting} onClick={handleDraw}>
+          Draw / not sure
+        </button>
+        <button type="button" className="shuffle-bar" disabled={submitting} onClick={handleShuffle}>
+          Show me something else
+        </button>
+      </div>
       {voteError && <p className="status-message status-message--error">{voteError}</p>}
       {impact && (
         <div className="impact">

@@ -65,6 +65,15 @@ export function pickMatchup(
 }
 
 /**
+ * Picks a genuinely random nearby-rank match-up, ignoring known-faction
+ * priority entirely. Used as an escape hatch when a champion streak (or the
+ * known-faction phase order) keeps surfacing the same faction over and over.
+ */
+export function pickRandomMatchup(factionsSortedByEloDesc: Faction[]): [Faction, Faction] | null {
+  return findWindowedPair(factionsSortedByEloDesc, () => true)
+}
+
+/**
  * Finds the nearest-ranked faction to `championId` that hasn't faced it yet,
  * searching outward in both rank directions at once.
  */

@@ -206,7 +206,14 @@
 
 /* Draw bar */
 
-.draw-bar {
+.secondary-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.draw-bar,
+.shuffle-bar {
   width: 100%;
   padding: 12px;
   border: 1px dashed var(--border);
@@ -218,11 +225,13 @@
   cursor: pointer;
 }
 
-.draw-bar:active:not(:disabled) {
+.draw-bar:active:not(:disabled),
+.shuffle-bar:active:not(:disabled) {
   background: var(--surface-raised);
 }
 
-.draw-bar:disabled {
+.draw-bar:disabled,
+.shuffle-bar:disabled {
   opacity: 0.6;
   cursor: default;
 }
