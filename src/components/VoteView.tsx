@@ -11,6 +11,7 @@ interface VoteViewProps {
   loading: boolean
   error: string | null
   knownFactionIds: Set<string>
+  voterName: string | null
   onVoted: () => Promise<void>
 }
 
@@ -32,7 +33,14 @@ function TierPill({ tier }: { tier: Tier }) {
   return <span className={`tier-pill tier-pill--${tier}`}>{tier}</span>
 }
 
-export function VoteView({ factions, loading, error, knownFactionIds, onVoted }: VoteViewProps) {
+export function VoteView({
+  factions,
+  loading,
+  error,
+  knownFactionIds,
+  voterName,
+  onVoted,
+}: VoteViewProps) {
   const [matchup, setMatchup] = useState<[Faction, Faction] | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [voteError, setVoteError] = useState<string | null>(null)
@@ -85,6 +93,7 @@ export function VoteView({ factions, loading, error, knownFactionIds, onVoted }:
     const { error: rpcError } = await supabase.rpc('record_vote', {
       p_winner_id: winner.id,
       p_loser_id: loser.id,
+      p_voter_name: voterName,
     })
 
     if (rpcError) {

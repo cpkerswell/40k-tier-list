@@ -22,6 +22,7 @@ insert into factions (name, faction_type) values
   ('World Eaters', 'Chaos'),
   ('Chaos Daemons', 'Chaos'),
   ('Chaos Knights', 'Chaos'),
+  ('Emperor''s Children', 'Chaos'),
   ('Aeldari', 'Xenos'),
   ('Drukhari', 'Xenos'),
   ('Necrons', 'Xenos'),

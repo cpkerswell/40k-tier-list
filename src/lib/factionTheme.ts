@@ -29,6 +29,7 @@ const FACTION_THEMES: Record<string, FactionTheme> = {
   'World Eaters': { color: '#8b1a1a', icon: 'skull' },
   'Chaos Daemons': { color: '#5b2a86', icon: 'chaosStar' },
   'Chaos Knights': { color: '#4a1f1f', icon: 'chaosStar' },
+  "Emperor's Children": { color: '#b83f7a', icon: 'chaosStar' },
 
   Aeldari: { color: '#2f8f8f', icon: 'blade' },
   Drukhari: { color: '#4a1a4a', icon: 'claw' },

@@ -28,6 +28,49 @@
   line-height: 1.4;
 }
 
+/* Voter name */
+
+.voter-name {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 12px;
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--accent-gold);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.voter-name--editing {
+  display: inline-flex;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.voter-name__input {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  padding: 6px 14px;
+  font-size: 0.85rem;
+  width: 160px;
+}
+
+.voter-name__save {
+  border: none;
+  border-radius: 999px;
+  background: var(--accent-gold);
+  color: #101114;
+  padding: 6px 14px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 /* Tabs */
 
 .tabs {
@@ -350,6 +393,52 @@
 
 .preference-chip--active .preference-chip__icon {
   color: #101114;
+}
+
+/* Activity feed */
+
+.feed {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.feed-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  padding: 12px 14px;
+}
+
+.feed-item__pick {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.feed-item__time {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.feed-tag {
+  --accent: #8a8a8a;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.feed-tag__icon {
+  width: 14px;
+  height: 14px;
 }
 
 /* Wider screens: show the match-up side by side */

@@ -20,6 +20,7 @@ create table if not exists votes (
   loser_elo_before double precision not null,
   winner_elo_after double precision not null,
   loser_elo_after double precision not null,
+  voter_name text check (voter_name is null or char_length(voter_name) <= 40),
   created_at timestamptz not null default now()
 );
 
@@ -29,7 +30,7 @@ create index if not exists votes_loser_id_idx on votes (loser_id);
 -- Records a single head-to-head vote and updates both factions' Elo atomically.
 -- Runs as SECURITY DEFINER so the anon key never needs direct UPDATE access to
 -- factions/votes -- all rating math happens here, server-side, in one place.
-create or replace function record_vote(p_winner_id uuid, p_loser_id uuid)
+create or replace function record_vote(p_winner_id uuid, p_loser_id uuid, p_voter_name text default null)
 returns void
 language plpgsql
 security definer
@@ -78,8 +79,8 @@ begin
   update factions set elo_rating = new_loser_elo, games_played = games_played + 1
   where id = p_loser_id;
 
-  insert into votes (winner_id, loser_id, winner_elo_before, loser_elo_before, winner_elo_after, loser_elo_after)
-  values (p_winner_id, p_loser_id, winner_elo, loser_elo, new_winner_elo, new_loser_elo);
+  insert into votes (winner_id, loser_id, winner_elo_before, loser_elo_before, winner_elo_after, loser_elo_after, voter_name)
+  values (p_winner_id, p_loser_id, winner_elo, loser_elo, new_winner_elo, new_loser_elo, nullif(trim(p_voter_name), ''));
 end;
 $$;
 
@@ -93,4 +94,7 @@ create policy "Public can read votes" on votes for select using (true);
 -- No insert/update/delete policies are defined for factions or votes, so the
 -- anon key cannot write to either table directly via the REST API. The only
 -- way to change a rating is through record_vote(), which is exposed below.
-grant execute on function record_vote(uuid, uuid) to anon;
+grant execute on function record_vote(uuid, uuid, text) to anon;
+
+-- Streams new votes to every connected browser for the live activity feed.
+alter publication supabase_realtime add table votes;
