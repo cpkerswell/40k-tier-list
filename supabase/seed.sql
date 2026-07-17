@@ -24,7 +24,6 @@ insert into factions (name, faction_type) values
   ('Chaos Knights', 'Chaos'),
   ('Aeldari', 'Xenos'),
   ('Drukhari', 'Xenos'),
-  ('Harlequins', 'Xenos'),
   ('Necrons', 'Xenos'),
   ('Orks', 'Xenos'),
   ('T''au Empire', 'Xenos'),

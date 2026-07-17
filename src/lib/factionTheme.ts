@@ -32,7 +32,6 @@ const FACTION_THEMES: Record<string, FactionTheme> = {
 
   Aeldari: { color: '#2f8f8f', icon: 'blade' },
   Drukhari: { color: '#4a1a4a', icon: 'claw' },
-  Harlequins: { color: '#b83280', icon: 'star' },
   Necrons: { color: '#2f8f5f', icon: 'gear' },
   Orks: { color: '#5b8a2f', icon: 'claw' },
   "T'au Empire": { color: '#3a7ca5', icon: 'bolt' },
