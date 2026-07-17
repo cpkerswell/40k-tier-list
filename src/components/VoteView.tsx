@@ -48,6 +48,7 @@ export function VoteView({
   onVoted,
 }: VoteViewProps) {
   const [championId, setChampionId] = useState<string | null>(null)
+  const [championSlot, setChampionSlot] = useState<0 | 1>(0)
   const [selection, setSelection] = useState<MatchupSelection | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [voteError, setVoteError] = useState<string | null>(null)
@@ -56,9 +57,9 @@ export function VoteView({
 
   useEffect(() => {
     if (factions.length >= 2) {
-      setSelection(pickNextMatchup(factions, knownFactionIds, championId))
+      setSelection(pickNextMatchup(factions, knownFactionIds, championId, championSlot))
     }
-  }, [factions, knownFactionIds, championId])
+  }, [factions, knownFactionIds, championId, championSlot])
 
   // Fires once `factions` has been refetched after a vote, so we can compare
   // tier placement before vs. after using the freshly recalculated Elo order.
@@ -115,6 +116,7 @@ export function VoteView({
 
     if (!selection.isBothKnown) {
       setChampionId(winner.id)
+      setChampionSlot(selection.matchup[0].id === winner.id ? 0 : 1)
     }
 
     await onVoted()
@@ -127,9 +129,10 @@ export function VoteView({
     const [factionA, factionB] = selection.matchup
     recordVotedPair(factionA.id, factionB.id)
     recordDrawOutcome(factionA, factionB)
-    // championId is intentionally left untouched: a draw carries the
-    // reigning champion forward instead of resetting the streak.
-    setSelection(pickNextMatchup(factions, knownFactionIds, championId))
+    // championId/championSlot are intentionally left untouched: a draw
+    // carries the reigning champion forward, in the same slot, instead of
+    // resetting the streak.
+    setSelection(pickNextMatchup(factions, knownFactionIds, championId, championSlot))
   }
 
   if (loading) {

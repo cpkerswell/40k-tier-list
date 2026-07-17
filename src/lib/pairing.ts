@@ -108,11 +108,16 @@ export interface MatchupSelection {
  * loses or runs out of challengers. Otherwise falls back to a fresh pick via
  * pickMatchup's phase order. With no known factions selected, the champion
  * mechanic never engages (isBothKnown is always reported true).
+ *
+ * `championSlot` places the reigning champion on the same side (0 or 1) it
+ * occupied last round, so a winning streak can be clicked through without
+ * moving the mouse.
  */
 export function pickNextMatchup(
   factionsSortedByEloDesc: Faction[],
   preferredFactionIds: Set<string>,
   championId: string | null,
+  championSlot: 0 | 1 = 0,
 ): MatchupSelection | null {
   const hasPreferences = preferredFactionIds.size > 0
 
@@ -122,7 +127,7 @@ export function pickNextMatchup(
 
     if (champion && opponent) {
       const pair: [Faction, Faction] =
-        Math.random() < 0.5 ? [champion, opponent] : [opponent, champion]
+        championSlot === 0 ? [champion, opponent] : [opponent, champion]
       return {
         matchup: pair,
         isBothKnown:
