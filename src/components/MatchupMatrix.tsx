@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { useMatchupVotes } from '../hooks/useMatchupVotes'
 import { getFactionTheme, readableInk } from '../lib/factionTheme'
 import { computeMatrixCell, winRateColor } from '../lib/matrix'
-import { getMatrixFactionIds, toggleMatrixFaction } from '../lib/matrixSelection'
+import { getMatrixFactionIds, MAX_MATRIX_FACTIONS, toggleMatrixFaction } from '../lib/matrixSelection'
 import type { Faction, FactionType } from '../types'
 import { FactionIcon } from './icons'
 
@@ -23,26 +23,26 @@ const TYPE_ORDER: FactionType[] = ['Imperium', 'Chaos', 'Xenos']
 export function MatchupMatrix({ groupSlug, isGlobal, factions }: MatchupMatrixProps) {
   const [selectedIds, setSelectedIds] = useState<string[]>(() => getMatrixFactionIds(groupSlug))
   const { votes, loading, error } = useMatchupVotes(groupSlug, isGlobal, selectedIds)
+  const atCap = selectedIds.length >= MAX_MATRIX_FACTIONS
 
   function handleToggle(factionId: string) {
     setSelectedIds(toggleMatrixFaction(groupSlug, factionId))
   }
 
-  // Rows are the picked factions; columns are every faction in the pool, so
-  // each pick is measured against the whole field rather than just the other
-  // picks.
-  const rowFactions = selectedIds
+  // Picked factions run along the top (columns); every other faction runs
+  // down the side (rows), so each pick is measured against the whole field.
+  const pickedFactions = selectedIds
     .map((id) => factions.find((faction) => faction.id === id))
     .filter((faction): faction is Faction => Boolean(faction))
-  const columnFactions = [...factions].sort((a, b) => b.elo_rating - a.elo_rating)
+  const allFactionsByElo = [...factions].sort((a, b) => b.elo_rating - a.elo_rating)
 
   return (
     <div className="matrix-section">
       <h2 className="matrix-section__title">Matchup Matrix</h2>
       <p className="matrix-section__intro">
-        Pick factions to see how they stack up against every other faction. Green means a strong
-        match-up, red means weak, based on actual votes between that pair — or an Elo-projected
-        estimate (dashed border) when they haven't faced off yet.
+        Pick up to {MAX_MATRIX_FACTIONS} factions to see how they stack up against every other
+        faction. Green means a strong match-up, red means weak, based on actual votes between
+        that pair — or an Elo-projected estimate (dashed border) when they haven't faced off yet.
       </p>
 
       {TYPE_ORDER.map((type) => {
@@ -56,6 +56,7 @@ export function MatchupMatrix({ groupSlug, isGlobal, factions }: MatchupMatrixPr
               {group.map((faction) => {
                 const theme = getFactionTheme(faction)
                 const active = selectedIds.includes(faction.id)
+                const disabled = atCap && !active
                 const style: AccentStyle = {
                   '--accent': theme.color,
                   '--accent-ink': readableInk(theme.color),
@@ -67,6 +68,7 @@ export function MatchupMatrix({ groupSlug, isGlobal, factions }: MatchupMatrixPr
                     className={`matrix-chip ${active ? 'matrix-chip--active' : ''}`}
                     style={style}
                     aria-pressed={active}
+                    disabled={disabled}
                     onClick={() => handleToggle(faction.id)}
                   >
                     <FactionIcon icon={theme.icon} className="matrix-chip__icon" />
@@ -79,11 +81,15 @@ export function MatchupMatrix({ groupSlug, isGlobal, factions }: MatchupMatrixPr
         )
       })}
 
-      {rowFactions.length === 0 && (
+      <p className="matrix-section__count">
+        {selectedIds.length} / {MAX_MATRIX_FACTIONS} selected
+      </p>
+
+      {pickedFactions.length === 0 && (
         <p className="status-message">Pick at least one faction to see the matrix.</p>
       )}
 
-      {rowFactions.length > 0 && (
+      {pickedFactions.length > 0 && (
         <>
           {loading && <p className="status-message">Loading matchups...</p>}
           {error && <p className="status-message status-message--error">{error}</p>}
@@ -93,7 +99,7 @@ export function MatchupMatrix({ groupSlug, isGlobal, factions }: MatchupMatrixPr
                 <thead>
                   <tr>
                     <th className="matrix-table__corner" />
-                    {columnFactions.map((colFaction) => {
+                    {pickedFactions.map((colFaction) => {
                       const theme = getFactionTheme(colFaction)
                       const style: AccentStyle = {
                         '--accent': theme.color,
@@ -108,7 +114,7 @@ export function MatchupMatrix({ groupSlug, isGlobal, factions }: MatchupMatrixPr
                   </tr>
                 </thead>
                 <tbody>
-                  {rowFactions.map((rowFaction) => {
+                  {allFactionsByElo.map((rowFaction) => {
                     const rowTheme = getFactionTheme(rowFaction)
                     const rowStyle: AccentStyle = {
                       '--accent': rowTheme.color,
@@ -120,7 +126,7 @@ export function MatchupMatrix({ groupSlug, isGlobal, factions }: MatchupMatrixPr
                           <FactionIcon icon={rowTheme.icon} className="matrix-table__header-icon" />
                           <span>{rowFaction.name}</span>
                         </th>
-                        {columnFactions.map((colFaction) => {
+                        {pickedFactions.map((colFaction) => {
                           if (rowFaction.id === colFaction.id) {
                             return (
                               <td key={colFaction.id} className="matrix-cell matrix-cell--self">
@@ -129,12 +135,15 @@ export function MatchupMatrix({ groupSlug, isGlobal, factions }: MatchupMatrixPr
                             )
                           }
 
+                          // Cell shows the PICKED (column) faction's win rate
+                          // over the row faction, since the picks are the
+                          // focus of this view.
                           const cell = computeMatrixCell(
                             votes,
-                            rowFaction.id,
                             colFaction.id,
-                            rowFaction.elo_rating,
+                            rowFaction.id,
                             colFaction.elo_rating,
+                            rowFaction.elo_rating,
                           )
                           const percent = Math.round(cell.winRate * 100)
 

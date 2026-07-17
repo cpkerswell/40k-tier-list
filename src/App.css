@@ -852,6 +852,17 @@
   color: var(--accent-ink, #101114);
 }
 
+.matrix-chip:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.matrix-section__count {
+  margin: -6px 0 0;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
 .matrix-scroll {
   overflow-x: auto;
   border: 1px solid var(--border);
