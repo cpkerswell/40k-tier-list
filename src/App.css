@@ -499,11 +499,11 @@
 .preference-chip--active {
   background: var(--accent);
   border-color: var(--accent);
-  color: #101114;
+  color: var(--accent-ink, #101114);
 }
 
 .preference-chip--active .preference-chip__icon {
-  color: #101114;
+  color: var(--accent-ink, #101114);
 }
 
 .disposition-tags {
@@ -525,9 +525,9 @@
 }
 
 .disposition-tag--active {
-  background: var(--accent-gold);
-  border-color: var(--accent-gold);
-  color: #101114;
+  background: var(--accent, var(--accent-gold));
+  border-color: var(--accent, var(--accent-gold));
+  color: var(--accent-ink, #101114);
 }
 
 /* Tiers screen (tier list + live activity feed) */

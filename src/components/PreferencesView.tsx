@@ -6,7 +6,7 @@ import {
   toggleFactionDisposition,
   type Disposition,
 } from '../lib/dispositions'
-import { getFactionTheme } from '../lib/factionTheme'
+import { getFactionTheme, readableInk } from '../lib/factionTheme'
 import type { Faction, FactionType } from '../types'
 import { FactionIcon } from './icons'
 
@@ -21,6 +21,7 @@ interface PreferencesViewProps {
 
 interface PreferenceChipAccentStyle extends CSSProperties {
   '--accent': string
+  '--accent-ink': string
 }
 
 const TYPE_ORDER: FactionType[] = ['Imperium', 'Chaos', 'Xenos']
@@ -80,7 +81,10 @@ export function PreferencesView({
               {group.map((faction) => {
                 const theme = getFactionTheme(faction)
                 const known = knownFactionIds.has(faction.id)
-                const style: PreferenceChipAccentStyle = { '--accent': theme.color }
+                const style: PreferenceChipAccentStyle = {
+                  '--accent': theme.color,
+                  '--accent-ink': readableInk(theme.color),
+                }
                 const taggedDispositions = dispositionsByFaction[faction.id] ?? []
 
                 return (
@@ -96,7 +100,7 @@ export function PreferencesView({
                       <span>{faction.name}</span>
                     </button>
                     {known && (
-                      <div className="disposition-tags">
+                      <div className="disposition-tags" style={style}>
                         {DISPOSITIONS.map((disposition) => {
                           const active = taggedDispositions.includes(disposition)
                           return (

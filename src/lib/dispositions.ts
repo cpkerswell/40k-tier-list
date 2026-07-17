@@ -67,13 +67,13 @@ export function pickRandomDisposition(dispositions: Disposition[]): Disposition 
 
 const SHOW_DISPOSITIONS_KEY = '40k-tier-list:show-dispositions'
 
-/** Global (not per-group) — this is about how you like to see the app. */
+/** Global (not per-group) — this is about how you like to see the app.
+ * Off by default; opt in via the header toggle. */
 export function getShowDispositions(): boolean {
   try {
-    const raw = localStorage.getItem(SHOW_DISPOSITIONS_KEY)
-    return raw === null ? true : raw === 'true'
+    return localStorage.getItem(SHOW_DISPOSITIONS_KEY) === 'true'
   } catch {
-    return true
+    return false
   }
 }
 

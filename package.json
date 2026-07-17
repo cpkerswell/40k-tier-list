@@ -8,6 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
+    "smoke": "node scripts/smoke-test.mjs",
     "db:push": "supabase db push",
     "db:pull": "supabase db pull",
     "db:new-migration": "supabase migration new"

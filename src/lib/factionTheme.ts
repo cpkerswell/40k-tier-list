@@ -50,3 +50,18 @@ const TYPE_FALLBACK_THEMES: Record<FactionType, FactionTheme> = {
 export function getFactionTheme(faction: Faction): FactionTheme {
   return FACTION_THEMES[faction.name] ?? TYPE_FALLBACK_THEMES[faction.faction_type]
 }
+
+/**
+ * Returns a readable text colour (near-black or near-white) to sit on top of
+ * a filled `hexColor` background, chosen by the background's relative
+ * luminance. Keeps active chips legible even on very dark faction colours
+ * like Deathwatch or Black Templars.
+ */
+export function readableInk(hexColor: string): string {
+  const hex = hexColor.replace('#', '')
+  const r = parseInt(hex.slice(0, 2), 16) / 255
+  const g = parseInt(hex.slice(2, 4), 16) / 255
+  const b = parseInt(hex.slice(4, 6), 16) / 255
+  const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b
+  return luminance > 0.5 ? '#101114' : '#f2f1ec'
+}
