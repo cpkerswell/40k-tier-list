@@ -459,13 +459,19 @@
 
 .feed-item {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  flex-direction: column;
+  gap: 8px;
   border: 1px solid var(--border);
   border-radius: 12px;
   background: var(--surface);
   padding: 12px 14px;
+}
+
+.feed-item__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .feed-item__pick {
@@ -479,6 +485,23 @@
   color: var(--text-muted);
   font-size: 0.78rem;
   white-space: nowrap;
+}
+
+.feed-item__tier-shift {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--border);
+}
+
+.feed-item__shift-entry {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
 }
 
 .feed-tag {

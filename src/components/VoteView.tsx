@@ -11,6 +11,7 @@ import {
 } from '../lib/voteHistory'
 import type { Faction, Tier } from '../types'
 import { FactionCard } from './FactionCard'
+import { TierPill } from './TierPill'
 
 interface VoteViewProps {
   factions: Faction[]
@@ -33,10 +34,6 @@ interface PendingImpact {
   loserId: string
   loserName: string
   loserTierBefore: Tier
-}
-
-function TierPill({ tier }: { tier: Tier }) {
-  return <span className={`tier-pill tier-pill--${tier}`}>{tier}</span>
 }
 
 export function VoteView({
