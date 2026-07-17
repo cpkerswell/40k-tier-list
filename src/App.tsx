@@ -5,6 +5,7 @@ import { TierListView } from './components/TierListView'
 import { VoteView } from './components/VoteView'
 import { VoterNameControl } from './components/VoterNameControl'
 import { useFactions } from './hooks/useFactions'
+import { getShowDispositions, setShowDispositions } from './lib/dispositions'
 import { getGroupSlugFromLocation } from './lib/group'
 import { getVoterName, setVoterName } from './lib/identity'
 import { getKnownFactionIds, toggleKnownFaction } from './lib/preferences'
@@ -20,6 +21,7 @@ function App() {
     getKnownFactionIds(groupSlug),
   )
   const [voterName, setVoterNameState] = useState<string | null>(() => getVoterName())
+  const [showDispositions, setShowDispositionsState] = useState<boolean>(() => getShowDispositions())
 
   function handleToggleKnown(factionId: string) {
     setKnownFactionIds(toggleKnownFaction(groupSlug, factionId))
@@ -27,6 +29,12 @@ function App() {
 
   function handleNameChange(name: string) {
     setVoterNameState(setVoterName(name))
+  }
+
+  function handleToggleDispositions() {
+    const next = !showDispositions
+    setShowDispositions(next)
+    setShowDispositionsState(next)
   }
 
   return (
@@ -37,7 +45,17 @@ function App() {
           Pick the stronger faction in each match-up — every vote updates that faction&rsquo;s
           Elo rating and reshapes the S&ndash;D tier list.
         </p>
-        <VoterNameControl name={voterName} onChange={handleNameChange} />
+        <div className="app__header-controls">
+          <VoterNameControl name={voterName} onChange={handleNameChange} />
+          <button
+            type="button"
+            className="disposition-toggle"
+            aria-pressed={showDispositions}
+            onClick={handleToggleDispositions}
+          >
+            Dispositions: {showDispositions ? 'On' : 'Off'}
+          </button>
+        </div>
       </header>
 
       <nav className="tabs" role="tablist">
@@ -79,11 +97,13 @@ function App() {
             error={error}
             knownFactionIds={knownFactionIds}
             voterName={voterName}
+            showDispositions={showDispositions}
             onVoted={refetch}
           />
         )}
         {tab === 'factions' && (
           <PreferencesView
+            groupSlug={groupSlug}
             factions={factions}
             loading={loading}
             error={error}
@@ -93,7 +113,7 @@ function App() {
         )}
         {tab === 'tiers' && (
           <div className="tiers-screen">
-            <TierListView factions={factions} loading={loading} error={error} />
+            <TierListView groupSlug={groupSlug} factions={factions} loading={loading} error={error} />
             <ActivityFeed groupSlug={groupSlug} factions={factions} onNewVote={refetch} />
           </div>
         )}

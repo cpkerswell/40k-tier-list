@@ -1,34 +1,13 @@
--- 40K Tier List schema
--- Run this in the Supabase SQL Editor (Project -> SQL Editor -> New query).
+-- Adds Warhammer 40k 11th edition "Force Dispositions" as an optional layer
+-- on top of the existing per-faction Elo. A vote can optionally tag either
+-- side with a disposition (Take and Hold / Purge the Foe / Reconnaissance /
+-- Disruption / Priority Assets); when it does, a *second*, disposition-scoped
+-- Elo is updated alongside the faction's normal whole-faction rating (which
+-- keeps updating on every vote regardless, so the aggregate view never needs
+-- reconstructing). The tier list can then choose, per faction, to show one
+-- unified row or split rows per disposition, based on how many distinct
+-- dispositions actually have data.
 
-create extension if not exists "pgcrypto";
-
-create table if not exists factions (
-  id uuid primary key default gen_random_uuid(),
-  name text not null unique,
-  faction_type text not null check (faction_type in ('Imperium', 'Chaos', 'Xenos')),
-  created_at timestamptz not null default now()
-);
-
--- Elo ratings are scoped per group (e.g. /groupA gets its own isolated
--- pool), not stored directly on factions. Rows are created lazily by
--- record_vote only for factions that have actually been voted on within a
--- given group; factions_for_group() below defaults everything else to
--- 1500/0 rather than requiring every faction to be pre-seeded per group.
-create table if not exists group_ratings (
-  group_slug text not null,
-  faction_id uuid not null references factions (id) on delete cascade,
-  elo_rating double precision not null default 1500,
-  games_played integer not null default 0,
-  primary key (group_slug, faction_id)
-);
-
-create index if not exists group_ratings_group_slug_idx on group_ratings (group_slug);
-
--- Optional disposition-scoped Elo, additive to group_ratings above. A vote
--- can tag either side with one of the five Force Dispositions (11th
--- edition); when it does, this table also gets updated so the tier list can
--- offer a "by disposition" breakdown alongside the whole-faction view.
 create table if not exists group_disposition_ratings (
   group_slug text not null,
   faction_id uuid not null references factions (id) on delete cascade,
@@ -43,52 +22,28 @@ create table if not exists group_disposition_ratings (
 create index if not exists group_disposition_ratings_lookup_idx
   on group_disposition_ratings (group_slug, faction_id);
 
-create table if not exists votes (
-  id uuid primary key default gen_random_uuid(),
-  winner_id uuid not null references factions (id) on delete cascade,
-  loser_id uuid not null references factions (id) on delete cascade,
-  winner_elo_before double precision not null,
-  loser_elo_before double precision not null,
-  winner_elo_after double precision not null,
-  loser_elo_after double precision not null,
-  voter_name text check (voter_name is null or char_length(voter_name) <= 40),
-  group_slug text not null default 'default',
-  winner_disposition text check (winner_disposition is null or winner_disposition in (
-    'Take and Hold', 'Purge the Foe', 'Reconnaissance', 'Disruption', 'Priority Assets'
-  )),
-  loser_disposition text check (loser_disposition is null or loser_disposition in (
-    'Take and Hold', 'Purge the Foe', 'Reconnaissance', 'Disruption', 'Priority Assets'
-  )),
-  created_at timestamptz not null default now()
-);
+alter table group_disposition_ratings enable row level security;
 
-create index if not exists votes_winner_id_idx on votes (winner_id);
-create index if not exists votes_loser_id_idx on votes (loser_id);
-create index if not exists votes_group_slug_idx on votes (group_slug);
+do $$
+begin
+  if not exists (
+    select 1 from pg_policies
+    where tablename = 'group_disposition_ratings'
+      and policyname = 'Public can read group disposition ratings'
+  ) then
+    create policy "Public can read group disposition ratings"
+      on group_disposition_ratings for select using (true);
+  end if;
+end $$;
 
--- Read helper: every faction plus its rating within one group.
-create or replace function factions_for_group(p_group_slug text)
-returns table (
-  id uuid,
-  name text,
-  faction_type text,
-  elo_rating double precision,
-  games_played integer
-)
-language sql
-stable
-as $$
-  select
-    f.id,
-    f.name,
-    f.faction_type,
-    coalesce(gr.elo_rating, 1500) as elo_rating,
-    coalesce(gr.games_played, 0) as games_played
-  from factions f
-  left join group_ratings gr
-    on gr.faction_id = f.id and gr.group_slug = p_group_slug
-  order by coalesce(gr.elo_rating, 1500) desc;
-$$;
+alter table votes add column if not exists winner_disposition text
+  check (winner_disposition is null or winner_disposition in (
+    'Take and Hold', 'Purge the Foe', 'Reconnaissance', 'Disruption', 'Priority Assets'
+  ));
+alter table votes add column if not exists loser_disposition text
+  check (loser_disposition is null or loser_disposition in (
+    'Take and Hold', 'Purge the Foe', 'Reconnaissance', 'Disruption', 'Priority Assets'
+  ));
 
 -- Read helper for the tier list's "By Disposition" view: only dispositions
 -- that have actually accrued at least one vote, so factions with zero or one
@@ -109,11 +64,10 @@ as $$
   order by elo_rating desc;
 $$;
 
--- Records a single head-to-head vote and updates both factions' Elo (within
--- the given group) atomically, plus a disposition-scoped Elo for any side
--- that was tagged with one. Runs as SECURITY DEFINER so the anon key never
--- needs direct UPDATE access to the ratings tables -- all rating math
--- happens here, server-side, in one place.
+grant execute on function disposition_ratings_for_group(text) to anon;
+
+drop function if exists record_vote(uuid, uuid, text, text);
+
 create or replace function record_vote(
   p_winner_id uuid,
   p_loser_id uuid,
@@ -163,8 +117,6 @@ begin
     raise exception 'faction not found';
   end if;
 
-  -- Higher K-factor while a faction still has few votes, so early opinions
-  -- move its rating faster; settles down once it has enough games logged.
   k_winner := case when winner_games < 30 then 40 else 20 end;
   k_loser := case when loser_games < 30 then 40 else 20 end;
 
@@ -249,24 +201,4 @@ begin
 end;
 $$;
 
-alter table factions enable row level security;
-alter table group_ratings enable row level security;
-alter table group_disposition_ratings enable row level security;
-alter table votes enable row level security;
-
--- Anyone can read faction metadata, per-group standings, and vote history.
-create policy "Public can read factions" on factions for select using (true);
-create policy "Public can read group ratings" on group_ratings for select using (true);
-create policy "Public can read group disposition ratings" on group_disposition_ratings for select using (true);
-create policy "Public can read votes" on votes for select using (true);
-
--- No insert/update/delete policies are defined for these tables, so the
--- anon key cannot write to them directly via the REST API. The only way to
--- change a rating is through record_vote() / the read helpers, exposed
--- below.
-grant execute on function factions_for_group(text) to anon;
-grant execute on function disposition_ratings_for_group(text) to anon;
 grant execute on function record_vote(uuid, uuid, text, text, text, text) to anon;
-
--- Streams new votes to every connected browser for the live activity feed.
-alter publication supabase_realtime add table votes;

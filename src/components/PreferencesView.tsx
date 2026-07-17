@@ -1,9 +1,17 @@
 import type { CSSProperties } from 'react'
+import { useState } from 'react'
+import {
+  DISPOSITIONS,
+  getDispositionsForFaction,
+  toggleFactionDisposition,
+  type Disposition,
+} from '../lib/dispositions'
 import { getFactionTheme } from '../lib/factionTheme'
 import type { Faction, FactionType } from '../types'
 import { FactionIcon } from './icons'
 
 interface PreferencesViewProps {
+  groupSlug: string
   factions: Faction[]
   loading: boolean
   error: string | null
@@ -18,12 +26,28 @@ interface PreferenceChipAccentStyle extends CSSProperties {
 const TYPE_ORDER: FactionType[] = ['Imperium', 'Chaos', 'Xenos']
 
 export function PreferencesView({
+  groupSlug,
   factions,
   loading,
   error,
   knownFactionIds,
   onToggle,
 }: PreferencesViewProps) {
+  const [dispositionsByFaction, setDispositionsByFaction] = useState<Record<string, Disposition[]>>(
+    () => {
+      const map: Record<string, Disposition[]> = {}
+      factions.forEach((faction) => {
+        map[faction.id] = getDispositionsForFaction(groupSlug, faction.id)
+      })
+      return map
+    },
+  )
+
+  function handleToggleDisposition(factionId: string, disposition: Disposition) {
+    const next = toggleFactionDisposition(groupSlug, factionId, disposition)
+    setDispositionsByFaction((previous) => ({ ...previous, [factionId]: next }))
+  }
+
   if (loading) {
     return <p className="status-message">Summoning the factions...</p>
   }
@@ -40,7 +64,9 @@ export function PreferencesView({
     <div className="preferences">
       <p className="preferences__intro">
         Mark the factions you actually know. Match-ups between two factions you know are shown
-        first on the Vote tab, before anything else.
+        first on the Vote tab, before anything else. For a known faction, tag the Force
+        Dispositions you play it with (or think are strong) — you'll be shown one of them when
+        that faction comes up in a vote.
       </p>
 
       {TYPE_ORDER.map((type) => {
@@ -55,19 +81,39 @@ export function PreferencesView({
                 const theme = getFactionTheme(faction)
                 const known = knownFactionIds.has(faction.id)
                 const style: PreferenceChipAccentStyle = { '--accent': theme.color }
+                const taggedDispositions = dispositionsByFaction[faction.id] ?? []
 
                 return (
-                  <button
-                    key={faction.id}
-                    type="button"
-                    className={`preference-chip ${known ? 'preference-chip--active' : ''}`}
-                    style={style}
-                    aria-pressed={known}
-                    onClick={() => onToggle(faction.id)}
-                  >
-                    <FactionIcon icon={theme.icon} className="preference-chip__icon" />
-                    <span>{faction.name}</span>
-                  </button>
+                  <div key={faction.id} className="preference-item">
+                    <button
+                      type="button"
+                      className={`preference-chip ${known ? 'preference-chip--active' : ''}`}
+                      style={style}
+                      aria-pressed={known}
+                      onClick={() => onToggle(faction.id)}
+                    >
+                      <FactionIcon icon={theme.icon} className="preference-chip__icon" />
+                      <span>{faction.name}</span>
+                    </button>
+                    {known && (
+                      <div className="disposition-tags">
+                        {DISPOSITIONS.map((disposition) => {
+                          const active = taggedDispositions.includes(disposition)
+                          return (
+                            <button
+                              key={disposition}
+                              type="button"
+                              className={`disposition-tag ${active ? 'disposition-tag--active' : ''}`}
+                              aria-pressed={active}
+                              onClick={() => handleToggleDisposition(faction.id, disposition)}
+                            >
+                              {disposition}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
                 )
               })}
             </div>

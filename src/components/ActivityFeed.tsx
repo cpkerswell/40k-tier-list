@@ -23,6 +23,8 @@ interface VoteRecord {
   winner_elo_after: number
   loser_elo_after: number
   voter_name: string | null
+  winner_disposition: string | null
+  loser_disposition: string | null
   created_at: string
 }
 
@@ -109,7 +111,7 @@ export function ActivityFeed({ groupSlug, factions, onNewVote }: ActivityFeedPro
       const { data, error: fetchError } = await supabase
         .from('votes')
         .select(
-          'id, winner_id, loser_id, winner_elo_before, loser_elo_before, winner_elo_after, loser_elo_after, voter_name, created_at',
+          'id, winner_id, loser_id, winner_elo_before, loser_elo_before, winner_elo_after, loser_elo_after, voter_name, winner_disposition, loser_disposition, created_at',
         )
         .eq('group_slug', groupSlug)
         .order('created_at', { ascending: false })
@@ -172,7 +174,14 @@ export function ActivityFeed({ groupSlug, factions, onNewVote }: ActivityFeedPro
                 <div className="feed-item__header">
                   <p className="feed-item__pick">
                     <strong>{vote.voter_name || 'Someone'}</strong> picked{' '}
-                    <FactionTag faction={winnerFaction} /> over <FactionTag faction={loserFaction} />
+                    <FactionTag faction={winnerFaction} />
+                    {vote.winner_disposition && (
+                      <span className="feed-item__disposition"> ({vote.winner_disposition})</span>
+                    )}{' '}
+                    over <FactionTag faction={loserFaction} />
+                    {vote.loser_disposition && (
+                      <span className="feed-item__disposition"> ({vote.loser_disposition})</span>
+                    )}
                   </p>
                   <span className="feed-item__time">{formatRelativeTime(vote.created_at)}</span>
                 </div>

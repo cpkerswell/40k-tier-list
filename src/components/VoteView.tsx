@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { getDispositionsForFaction, pickRandomDisposition, type Disposition } from '../lib/dispositions'
 import type { MatchupSelection } from '../lib/pairing'
 import { pickNextMatchup, pickRandomMatchup } from '../lib/pairing'
 import { assignTiers } from '../lib/tiers'
@@ -20,6 +21,7 @@ interface VoteViewProps {
   error: string | null
   knownFactionIds: Set<string>
   voterName: string | null
+  showDispositions: boolean
   onVoted: () => Promise<void>
 }
 
@@ -44,6 +46,7 @@ export function VoteView({
   error,
   knownFactionIds,
   voterName,
+  showDispositions,
   onVoted,
 }: VoteViewProps) {
   const [championId, setChampionId] = useState<string | null>(null)
@@ -65,6 +68,17 @@ export function VoteView({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [groupSlug, factions, knownFactionIds])
+
+  // Picked once per match-up (not per render), so what's displayed on each
+  // card is exactly what gets submitted alongside the vote.
+  const matchupDispositions = useMemo((): [Disposition | null, Disposition | null] => {
+    if (!selection || !showDispositions) return [null, null]
+    const [factionA, factionB] = selection.matchup
+    return [
+      pickRandomDisposition(getDispositionsForFaction(groupSlug, factionA.id)),
+      pickRandomDisposition(getDispositionsForFaction(groupSlug, factionB.id)),
+    ]
+  }, [selection, groupSlug, showDispositions])
 
   // Fires once `factions` has been refetched after a vote, so we can compare
   // tier placement before vs. after using the freshly recalculated Elo order.
@@ -103,11 +117,17 @@ export function VoteView({
       loserTierBefore: tierByFactionId.get(loser.id) ?? 'D',
     }
 
+    const winnerSlot = selection.matchup[0].id === winner.id ? 0 : 1
+    const winnerDisposition = matchupDispositions[winnerSlot]
+    const loserDisposition = matchupDispositions[winnerSlot === 0 ? 1 : 0]
+
     const { error: rpcError } = await supabase.rpc('record_vote', {
       p_winner_id: winner.id,
       p_loser_id: loser.id,
       p_voter_name: voterName,
       p_group_slug: groupSlug,
+      p_winner_disposition: winnerDisposition,
+      p_loser_disposition: loserDisposition,
     })
 
     if (rpcError) {
@@ -122,7 +142,7 @@ export function VoteView({
 
     if (!selection.isBothKnown) {
       setChampionId(winner.id)
-      setChampionSlot(selection.matchup[0].id === winner.id ? 0 : 1)
+      setChampionSlot(winnerSlot)
     }
 
     await onVoted()
@@ -169,6 +189,7 @@ export function VoteView({
   }
 
   const [factionA, factionB] = selection.matchup
+  const [dispositionA, dispositionB] = matchupDispositions
 
   return (
     <div className="vote-view">
@@ -178,6 +199,7 @@ export function VoteView({
           faction={factionA}
           disabled={submitting}
           lastOutcome={getLastOutcomeForFaction(groupSlug, factionA.id)}
+          disposition={dispositionA}
           onSelect={() => handleVote(factionA, factionB)}
         />
         <span className="matchup__vs">VS</span>
@@ -185,6 +207,7 @@ export function VoteView({
           faction={factionB}
           disabled={submitting}
           lastOutcome={getLastOutcomeForFaction(groupSlug, factionB.id)}
+          disposition={dispositionB}
           onSelect={() => handleVote(factionB, factionA)}
         />
       </div>

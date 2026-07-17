@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react'
+import type { Disposition } from '../lib/dispositions'
 import { getFactionTheme } from '../lib/factionTheme'
 import type { FactionOutcome } from '../lib/voteHistory'
 import type { Faction } from '../types'
@@ -13,6 +14,7 @@ interface FactionCardProps {
   onSelect: () => void
   disabled: boolean
   lastOutcome?: FactionOutcome | null
+  disposition?: Disposition | null
 }
 
 function describeLastOutcome(outcome: FactionOutcome): string {
@@ -21,7 +23,13 @@ function describeLastOutcome(outcome: FactionOutcome): string {
   return `Last time: drew with ${outcome.opponentName}`
 }
 
-export function FactionCard({ faction, onSelect, disabled, lastOutcome }: FactionCardProps) {
+export function FactionCard({
+  faction,
+  onSelect,
+  disabled,
+  lastOutcome,
+  disposition,
+}: FactionCardProps) {
   const theme = getFactionTheme(faction)
   const style: FactionCardAccentStyle = { '--accent': theme.color }
 
@@ -36,6 +44,7 @@ export function FactionCard({ faction, onSelect, disabled, lastOutcome }: Factio
       <FactionIcon icon={theme.icon} className="faction-card__icon" />
       <span className="faction-card__type">{faction.faction_type}</span>
       <span className="faction-card__name">{faction.name}</span>
+      {disposition && <span className="faction-card__disposition">{disposition}</span>}
       {lastOutcome && (
         <span className="faction-card__last-outcome">{describeLastOutcome(lastOutcome)}</span>
       )}

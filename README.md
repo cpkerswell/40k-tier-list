@@ -114,6 +114,16 @@ the LAN address it prints instead.
   visits. Ratings live in the `group_ratings` table, keyed by
   `(group_slug, faction_id)`, defaulting to 1500/0 for any faction nobody in
   that group has voted on yet (see `factions_for_group` in `schema.sql`).
+- **Dispositions** (`src/lib/dispositions.ts`): the five Warhammer 40k 11th
+  edition Force Dispositions (Take and Hold, Purge the Foe, Reconnaissance,
+  Disruption, Priority Assets). On the Factions tab, tag a known faction with
+  whichever ones you play it with; when that faction comes up in a vote,
+  you're shown one of its tagged dispositions (toggle this off in the header).
+  Every vote still updates the faction's normal whole-faction Elo, and
+  additionally updates a disposition-scoped Elo for any tagged side. The tier
+  list's "By Disposition" view splits a faction into separate ranked rows only
+  once 2+ distinct dispositions actually have votes for it; otherwise it stays
+  a single unified row.
 
 ## Project structure
 
