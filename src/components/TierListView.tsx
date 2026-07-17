@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react'
 import { useMemo, useState } from 'react'
 import { useDispositionRatings, type DispositionRating } from '../hooks/useDispositionRatings'
+import { DISPOSITION_ELO_GAP, MIN_GAMES_FOR_DISPOSITION_SIGNAL } from '../lib/dispositions'
 import { getFactionTheme } from '../lib/factionTheme'
 import { assignTiers, TIER_ORDER } from '../lib/tiers'
 import { withViewTransition } from '../lib/viewTransition'
@@ -37,13 +38,6 @@ interface TierEntry {
   elo_rating: number
 }
 
-// A disposition needs at least this many votes to influence placement or to
-// count toward a "split", so a single stray vote can't reshape the grid.
-const MIN_GAMES = 3
-// Dispositions must differ by at least this much Elo to be shown as a genuine
-// split rather than collapsed to a single front-runner row.
-const SPLIT_ELO_GAP = 75
-
 /** Turns a chip id into a valid CSS custom-ident for view-transition-name. */
 function transitionName(id: string): string {
   return `vt-${id.replace(/[^a-zA-Z0-9]/g, '_')}`
@@ -78,12 +72,12 @@ function buildDispositionEntries(
       return
     }
 
-    const significant = rows.filter((r) => r.games_played >= MIN_GAMES)
+    const significant = rows.filter((r) => r.games_played >= MIN_GAMES_FOR_DISPOSITION_SIGNAL)
     const gap = significant.length
       ? significant[0].elo_rating - significant[significant.length - 1].elo_rating
       : 0
 
-    if (significant.length >= 2 && gap >= SPLIT_ELO_GAP) {
+    if (significant.length >= 2 && gap >= DISPOSITION_ELO_GAP) {
       significant.forEach((row) => {
         entries.push({
           id: `${faction.id}::${row.disposition}`,

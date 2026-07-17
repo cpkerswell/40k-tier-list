@@ -18,6 +18,7 @@ interface PreferencesViewProps {
   loading: boolean
   error: string | null
   knownFactionIds: Set<string>
+  showDispositions: boolean
   onToggle: (factionId: string) => void
 }
 
@@ -35,6 +36,7 @@ export function PreferencesView({
   loading,
   error,
   knownFactionIds,
+  showDispositions,
   onToggle,
 }: PreferencesViewProps) {
   const [dispositionsByFaction, setDispositionsByFaction] = useState<Record<string, Disposition[]>>(
@@ -128,7 +130,12 @@ export function PreferencesView({
         )
       })}
 
-      <MatchupMatrix groupSlug={groupSlug} isGlobal={isGlobal} factions={factions} />
+      <MatchupMatrix
+        groupSlug={groupSlug}
+        isGlobal={isGlobal}
+        factions={factions}
+        showDispositions={showDispositions}
+      />
     </div>
   )
 }

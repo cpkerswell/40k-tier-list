@@ -1,6 +1,8 @@
 import type { CSSProperties } from 'react'
 import { useState } from 'react'
+import { useDispositionRatings, type DispositionRating } from '../hooks/useDispositionRatings'
 import { useMatchupVotes } from '../hooks/useMatchupVotes'
+import { findClearDisposition } from '../lib/dispositions'
 import { getFactionTheme, readableInk } from '../lib/factionTheme'
 import { computeMatrixCell, winRateColor } from '../lib/matrix'
 import { getMatrixFactionIds, MAX_MATRIX_FACTIONS, toggleMatrixFaction } from '../lib/matrixSelection'
@@ -11,6 +13,7 @@ interface MatchupMatrixProps {
   groupSlug: string
   isGlobal: boolean
   factions: Faction[]
+  showDispositions: boolean
 }
 
 interface AccentStyle extends CSSProperties {
@@ -20,9 +23,10 @@ interface AccentStyle extends CSSProperties {
 
 const TYPE_ORDER: FactionType[] = ['Imperium', 'Chaos', 'Xenos']
 
-export function MatchupMatrix({ groupSlug, isGlobal, factions }: MatchupMatrixProps) {
+export function MatchupMatrix({ groupSlug, isGlobal, factions, showDispositions }: MatchupMatrixProps) {
   const [selectedIds, setSelectedIds] = useState<string[]>(() => getMatrixFactionIds(groupSlug))
   const { votes, loading, error } = useMatchupVotes(groupSlug, isGlobal, selectedIds)
+  const { dispositionRatings } = useDispositionRatings(groupSlug, isGlobal)
   const atCap = selectedIds.length >= MAX_MATRIX_FACTIONS
 
   function handleToggle(factionId: string) {
@@ -36,6 +40,30 @@ export function MatchupMatrix({ groupSlug, isGlobal, factions }: MatchupMatrixPr
     .filter((faction): faction is Faction => Boolean(faction))
   const allFactionsByElo = [...factions].sort((a, b) => b.elo_rating - a.elo_rating)
 
+  const ratingsByFaction = new Map<string, DispositionRating[]>()
+  dispositionRatings.forEach((rating) => {
+    const ratings = ratingsByFaction.get(rating.faction_id) ?? []
+    ratings.push(rating)
+    ratingsByFaction.set(rating.faction_id, ratings)
+  })
+
+  // Only when a picked faction has a genuinely clear front-runner disposition
+  // (see findClearDisposition) do we use it: its disposition-scoped Elo for
+  // the projected fallback, and its disposition-tagged votes for the actual
+  // record, instead of the faction's whole-faction numbers.
+  const clearDispositionByFaction = new Map<
+    string,
+    { disposition: string; elo_rating: number } | null
+  >()
+  if (showDispositions) {
+    pickedFactions.forEach((faction) => {
+      clearDispositionByFaction.set(
+        faction.id,
+        findClearDisposition(ratingsByFaction.get(faction.id) ?? []),
+      )
+    })
+  }
+
   return (
     <div className="matrix-section">
       <h2 className="matrix-section__title">Matchup Matrix</h2>
@@ -43,6 +71,8 @@ export function MatchupMatrix({ groupSlug, isGlobal, factions }: MatchupMatrixPr
         Pick up to {MAX_MATRIX_FACTIONS} factions to see how they stack up against every other
         faction. Green means a strong match-up, red means weak, based on actual votes between
         that pair — or an Elo-projected estimate (dashed border) when they haven't faced off yet.
+        {showDispositions &&
+          ' When a faction has a clear standout Force Disposition, the matrix uses that instead of its overall rating.'}
       </p>
 
       {TYPE_ORDER.map((type) => {
@@ -105,9 +135,11 @@ export function MatchupMatrix({ groupSlug, isGlobal, factions }: MatchupMatrixPr
                         '--accent': theme.color,
                         '--accent-ink': readableInk(theme.color),
                       }
+                      const clear = clearDispositionByFaction.get(colFaction.id)
                       return (
                         <th key={colFaction.id} className="matrix-table__header" style={style}>
                           <FactionIcon icon={theme.icon} className="matrix-table__header-icon" />
+                          {clear && <span className="matrix-table__header-dispo">{clear.disposition}</span>}
                         </th>
                       )
                     })}
@@ -137,13 +169,17 @@ export function MatchupMatrix({ groupSlug, isGlobal, factions }: MatchupMatrixPr
 
                           // Cell shows the PICKED (column) faction's win rate
                           // over the row faction, since the picks are the
-                          // focus of this view.
+                          // focus of this view -- using its clear disposition
+                          // data in place of whole-faction numbers when one
+                          // stands out.
+                          const clear = clearDispositionByFaction.get(colFaction.id)
                           const cell = computeMatrixCell(
                             votes,
                             colFaction.id,
                             rowFaction.id,
-                            colFaction.elo_rating,
+                            clear ? clear.elo_rating : colFaction.elo_rating,
                             rowFaction.elo_rating,
+                            clear?.disposition,
                           )
                           const percent = Math.round(cell.winRate * 100)
 

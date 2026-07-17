@@ -113,6 +113,7 @@ function App() {
             loading={loading}
             error={error}
             knownFactionIds={knownFactionIds}
+            showDispositions={showDispositions}
             onToggle={handleToggleKnown}
           />
         )}

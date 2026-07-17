@@ -1,14 +1,16 @@
 export interface HeadToHeadVote {
   winner_id: string
   loser_id: string
+  winner_disposition: string | null
+  loser_disposition: string | null
 }
 
 export interface MatrixCell {
-  /** Row faction's win rate against the column faction, 0..1. */
+  /** Subject faction's win rate against the opponent, 0..1. */
   winRate: number
   totalVotes: number
-  /** True when there's no direct vote between these two and winRate is
-   * estimated from their current Elo ratings instead. */
+  /** True when there's no direct vote between these two (matching any
+   * disposition filter) and winRate is estimated from Elo instead. */
   isProjected: boolean
 }
 
@@ -17,30 +19,47 @@ function eloExpectedWinRate(eloA: number, eloB: number): number {
 }
 
 /**
- * Win rate of `rowFactionId` over `colFactionId`. Uses actual recorded votes
- * between exactly these two where they exist; otherwise falls back to an
- * Elo-projected expectation so every cell in the matrix stays informative.
+ * Win rate of `subjectFactionId` over `opponentFactionId`. Uses actual
+ * recorded votes between exactly these two where they exist; otherwise falls
+ * back to an Elo-projected expectation so every cell stays informative.
+ *
+ * When `subjectDisposition` is given, only votes where the subject's side was
+ * tagged with that exact disposition count toward the actual record (the
+ * opponent's disposition, if any, is irrelevant here — the subject is what's
+ * being measured). Pair this with the subject's disposition-specific Elo
+ * (rather than its whole-faction Elo) for the projected fallback too.
  */
 export function computeMatrixCell(
   headToHeadVotes: HeadToHeadVote[],
-  rowFactionId: string,
-  colFactionId: string,
-  rowElo: number,
-  colElo: number,
+  subjectFactionId: string,
+  opponentFactionId: string,
+  subjectElo: number,
+  opponentElo: number,
+  subjectDisposition?: string | null,
 ): MatrixCell {
-  let rowWins = 0
-  let colWins = 0
+  let subjectWins = 0
+  let opponentWins = 0
 
   headToHeadVotes.forEach((vote) => {
-    if (vote.winner_id === rowFactionId && vote.loser_id === colFactionId) rowWins += 1
-    else if (vote.winner_id === colFactionId && vote.loser_id === rowFactionId) colWins += 1
+    if (subjectDisposition) {
+      const subjectWasWinner = vote.winner_id === subjectFactionId
+      const subjectWasLoser = vote.loser_id === subjectFactionId
+      if (subjectWasWinner && vote.winner_disposition !== subjectDisposition) return
+      if (subjectWasLoser && vote.loser_disposition !== subjectDisposition) return
+    }
+
+    if (vote.winner_id === subjectFactionId && vote.loser_id === opponentFactionId) {
+      subjectWins += 1
+    } else if (vote.winner_id === opponentFactionId && vote.loser_id === subjectFactionId) {
+      opponentWins += 1
+    }
   })
 
-  const total = rowWins + colWins
+  const total = subjectWins + opponentWins
   if (total === 0) {
-    return { winRate: eloExpectedWinRate(rowElo, colElo), totalVotes: 0, isProjected: true }
+    return { winRate: eloExpectedWinRate(subjectElo, opponentElo), totalVotes: 0, isProjected: true }
   }
-  return { winRate: rowWins / total, totalVotes: total, isProjected: false }
+  return { winRate: subjectWins / total, totalVotes: total, isProjected: false }
 }
 
 /** Red (losing) -> amber -> green (winning), tuned for a dark background. */

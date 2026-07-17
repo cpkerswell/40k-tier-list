@@ -38,7 +38,7 @@ export function useMatchupVotes(
       const idList = pickedFactionIds.join(',')
       let query = supabase
         .from('votes')
-        .select('winner_id, loser_id')
+        .select('winner_id, loser_id, winner_disposition, loser_disposition')
         .or(`winner_id.in.(${idList}),loser_id.in.(${idList})`)
 
       if (!isGlobal) query = query.eq('group_slug', groupSlug)
