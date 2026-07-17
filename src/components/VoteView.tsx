@@ -1,8 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
+import type { MatchupSelection } from '../lib/pairing'
+import { pickNextMatchup } from '../lib/pairing'
 import { assignTiers } from '../lib/tiers'
-import { pickMatchup } from '../lib/pairing'
 import { supabase } from '../lib/supabaseClient'
-import { recordVotedPair } from '../lib/voteHistory'
+import {
+  getLastOutcomeForFaction,
+  recordDrawOutcome,
+  recordVotedPair,
+  recordWinOutcome,
+} from '../lib/voteHistory'
 import type { Faction, Tier } from '../types'
 import { FactionCard } from './FactionCard'
 
@@ -41,7 +47,8 @@ export function VoteView({
   voterName,
   onVoted,
 }: VoteViewProps) {
-  const [matchup, setMatchup] = useState<[Faction, Faction] | null>(null)
+  const [championId, setChampionId] = useState<string | null>(null)
+  const [selection, setSelection] = useState<MatchupSelection | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [voteError, setVoteError] = useState<string | null>(null)
   const [impact, setImpact] = useState<VoteImpact | null>(null)
@@ -49,9 +56,9 @@ export function VoteView({
 
   useEffect(() => {
     if (factions.length >= 2) {
-      setMatchup(pickMatchup(factions, knownFactionIds))
+      setSelection(pickNextMatchup(factions, knownFactionIds, championId))
     }
-  }, [factions, knownFactionIds])
+  }, [factions, knownFactionIds, championId])
 
   // Fires once `factions` has been refetched after a vote, so we can compare
   // tier placement before vs. after using the freshly recalculated Elo order.
@@ -76,7 +83,7 @@ export function VoteView({
   }, [factions])
 
   async function handleVote(winner: Faction, loser: Faction) {
-    if (submitting) return
+    if (submitting || !selection) return
     setSubmitting(true)
     setVoteError(null)
 
@@ -104,8 +111,25 @@ export function VoteView({
     }
 
     recordVotedPair(winner.id, loser.id)
+    recordWinOutcome(winner, loser)
+
+    if (!selection.isBothKnown) {
+      setChampionId(winner.id)
+    }
+
     await onVoted()
     setSubmitting(false)
+  }
+
+  function handleDraw() {
+    if (submitting || !selection) return
+
+    const [factionA, factionB] = selection.matchup
+    recordVotedPair(factionA.id, factionB.id)
+    recordDrawOutcome(factionA, factionB)
+    // championId is intentionally left untouched: a draw carries the
+    // reigning champion forward instead of resetting the streak.
+    setSelection(pickNextMatchup(factions, knownFactionIds, championId))
   }
 
   if (loading) {
@@ -116,7 +140,7 @@ export function VoteView({
     return <p className="status-message status-message--error">{error}</p>
   }
 
-  if (!matchup) {
+  if (!selection) {
     return (
       <p className="status-message">
         You&rsquo;ve voted on every nearby match-up. Check back once more votes come in and the
@@ -125,7 +149,7 @@ export function VoteView({
     )
   }
 
-  const [factionA, factionB] = matchup
+  const [factionA, factionB] = selection.matchup
 
   return (
     <div className="vote-view">
@@ -134,15 +158,20 @@ export function VoteView({
         <FactionCard
           faction={factionA}
           disabled={submitting}
+          lastOutcome={getLastOutcomeForFaction(factionA.id)}
           onSelect={() => handleVote(factionA, factionB)}
         />
         <span className="matchup__vs">VS</span>
         <FactionCard
           faction={factionB}
           disabled={submitting}
+          lastOutcome={getLastOutcomeForFaction(factionB.id)}
           onSelect={() => handleVote(factionB, factionA)}
         />
       </div>
+      <button type="button" className="draw-bar" disabled={submitting} onClick={handleDraw}>
+        Draw / not sure
+      </button>
       {voteError && <p className="status-message status-message--error">{voteError}</p>}
       {impact && (
         <div className="impact">

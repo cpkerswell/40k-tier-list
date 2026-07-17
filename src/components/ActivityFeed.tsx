@@ -8,6 +8,7 @@ import { FactionIcon } from './icons'
 
 interface ActivityFeedProps {
   factions: Faction[]
+  onNewVote?: () => void
 }
 
 interface VoteRecord {
@@ -40,7 +41,7 @@ function FactionTag({ faction }: { faction: Faction | undefined }) {
   )
 }
 
-export function ActivityFeed({ factions }: ActivityFeedProps) {
+export function ActivityFeed({ factions, onNewVote }: ActivityFeedProps) {
   const [votes, setVotes] = useState<VoteRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -74,6 +75,7 @@ export function ActivityFeed({ factions }: ActivityFeedProps) {
         (payload) => {
           const newVote = payload.new as VoteRecord
           setVotes((previous) => [newVote, ...previous].slice(0, FEED_LIMIT))
+          onNewVote?.()
         },
       )
       .subscribe()
@@ -82,34 +84,32 @@ export function ActivityFeed({ factions }: ActivityFeedProps) {
       active = false
       supabase.removeChannel(channel)
     }
-  }, [])
-
-  if (loading) {
-    return <p className="status-message">Loading recent activity...</p>
-  }
-
-  if (error) {
-    return <p className="status-message status-message--error">{error}</p>
-  }
-
-  if (votes.length === 0) {
-    return <p className="status-message">No votes yet. Be the first!</p>
-  }
+  }, [onNewVote])
 
   const factionById = new Map(factions.map((faction) => [faction.id, faction]))
 
   return (
     <div className="feed">
-      {votes.map((vote) => (
-        <div key={vote.id} className="feed-item">
-          <p className="feed-item__pick">
-            <strong>{vote.voter_name || 'Someone'}</strong> picked{' '}
-            <FactionTag faction={factionById.get(vote.winner_id)} /> over{' '}
-            <FactionTag faction={factionById.get(vote.loser_id)} />
-          </p>
-          <span className="feed-item__time">{formatRelativeTime(vote.created_at)}</span>
+      <h2 className="feed__heading">Live Activity</h2>
+      {loading && <p className="status-message">Loading recent activity...</p>}
+      {!loading && error && <p className="status-message status-message--error">{error}</p>}
+      {!loading && !error && votes.length === 0 && (
+        <p className="status-message">No votes yet. Be the first!</p>
+      )}
+      {!loading && !error && votes.length > 0 && (
+        <div className="feed__list">
+          {votes.map((vote) => (
+            <div key={vote.id} className="feed-item">
+              <p className="feed-item__pick">
+                <strong>{vote.voter_name || 'Someone'}</strong> picked{' '}
+                <FactionTag faction={factionById.get(vote.winner_id)} /> over{' '}
+                <FactionTag faction={factionById.get(vote.loser_id)} />
+              </p>
+              <span className="feed-item__time">{formatRelativeTime(vote.created_at)}</span>
+            </div>
+          ))}
         </div>
-      ))}
+      )}
     </div>
   )
 }

@@ -9,7 +9,7 @@ import { getVoterName, setVoterName } from './lib/identity'
 import { getKnownFactionIds, toggleKnownFaction } from './lib/preferences'
 import './App.css'
 
-type Tab = 'vote' | 'factions' | 'tiers' | 'feed'
+type Tab = 'vote' | 'factions' | 'tiers'
 
 function App() {
   const [tab, setTab] = useState<Tab>('vote')
@@ -64,15 +64,6 @@ function App() {
         >
           Tiers
         </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={tab === 'feed'}
-          className={`tabs__tab ${tab === 'feed' ? 'tabs__tab--active' : ''}`}
-          onClick={() => setTab('feed')}
-        >
-          Feed
-        </button>
       </nav>
 
       <main className="app__main">
@@ -95,8 +86,12 @@ function App() {
             onToggle={handleToggleKnown}
           />
         )}
-        {tab === 'tiers' && <TierListView factions={factions} loading={loading} error={error} />}
-        {tab === 'feed' && <ActivityFeed factions={factions} />}
+        {tab === 'tiers' && (
+          <div className="tiers-screen">
+            <TierListView factions={factions} loading={loading} error={error} />
+            <ActivityFeed factions={factions} onNewVote={refetch} />
+          </div>
+        )}
       </main>
     </div>
   )
