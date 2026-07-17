@@ -12,10 +12,12 @@ import {
 } from '../lib/voteHistory'
 import type { Faction, Tier } from '../types'
 import { FactionCard } from './FactionCard'
+import { Leaderboard } from './Leaderboard'
 import { TierPill } from './TierPill'
 
 interface VoteViewProps {
   groupSlug: string
+  isGlobal: boolean
   factions: Faction[]
   loading: boolean
   error: string | null
@@ -41,6 +43,7 @@ interface PendingImpact {
 
 export function VoteView({
   groupSlug,
+  isGlobal,
   factions,
   loading,
   error,
@@ -181,10 +184,13 @@ export function VoteView({
 
   if (!selection) {
     return (
-      <p className="status-message">
-        You&rsquo;ve voted on every nearby match-up. Check back once more votes come in and the
-        rankings shift.
-      </p>
+      <div className="vote-view">
+        <p className="status-message">
+          You&rsquo;ve voted on every nearby match-up. Check back once more votes come in and the
+          rankings shift.
+        </p>
+        <Leaderboard groupSlug={groupSlug} isGlobal={isGlobal} />
+      </div>
     )
   }
 
@@ -241,6 +247,7 @@ export function VoteView({
           </div>
         </div>
       )}
+      <Leaderboard groupSlug={groupSlug} isGlobal={isGlobal} />
     </div>
   )
 }

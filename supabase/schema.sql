@@ -161,6 +161,35 @@ as $$
   order by elo_rating desc;
 $$;
 
+-- Read helpers for a "who's voted the most" leaderboard on the Vote screen.
+-- Anonymous votes (no voter_name) are excluded -- the leaderboard is about
+-- named voters who opted in to being tracked.
+create or replace function leaderboard_for_group(p_group_slug text)
+returns table (voter_name text, vote_count bigint)
+language sql
+stable
+as $$
+  select voter_name, count(*) as vote_count
+  from votes
+  where group_slug = p_group_slug and voter_name is not null
+  group by voter_name
+  order by vote_count desc
+  limit 20;
+$$;
+
+create or replace function leaderboard_aggregate()
+returns table (voter_name text, vote_count bigint)
+language sql
+stable
+as $$
+  select voter_name, count(*) as vote_count
+  from votes
+  where voter_name is not null
+  group by voter_name
+  order by vote_count desc
+  limit 20;
+$$;
+
 -- Records a single head-to-head vote and updates both factions' Elo (within
 -- the given group) atomically, plus a disposition-scoped Elo for any side
 -- that was tagged with one. Runs as SECURITY DEFINER so the anon key never
@@ -320,6 +349,8 @@ grant execute on function factions_for_group(text) to anon;
 grant execute on function disposition_ratings_for_group(text) to anon;
 grant execute on function factions_aggregate() to anon;
 grant execute on function disposition_ratings_aggregate() to anon;
+grant execute on function leaderboard_for_group(text) to anon;
+grant execute on function leaderboard_aggregate() to anon;
 grant execute on function record_vote(uuid, uuid, text, text, text, text) to anon;
 
 -- Streams new votes to every connected browser for the live activity feed.

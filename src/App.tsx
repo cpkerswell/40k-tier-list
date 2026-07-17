@@ -95,6 +95,7 @@ function App() {
         {tab === 'vote' && (
           <VoteView
             groupSlug={groupSlug}
+            isGlobal={isGlobal}
             factions={factions}
             loading={loading}
             error={error}
@@ -107,6 +108,7 @@ function App() {
         {tab === 'factions' && (
           <PreferencesView
             groupSlug={groupSlug}
+            isGlobal={isGlobal}
             factions={factions}
             loading={loading}
             error={error}

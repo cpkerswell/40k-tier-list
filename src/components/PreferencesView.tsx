@@ -9,9 +9,11 @@ import {
 import { getFactionTheme, readableInk } from '../lib/factionTheme'
 import type { Faction, FactionType } from '../types'
 import { FactionIcon } from './icons'
+import { MatchupMatrix } from './MatchupMatrix'
 
 interface PreferencesViewProps {
   groupSlug: string
+  isGlobal: boolean
   factions: Faction[]
   loading: boolean
   error: string | null
@@ -28,6 +30,7 @@ const TYPE_ORDER: FactionType[] = ['Imperium', 'Chaos', 'Xenos']
 
 export function PreferencesView({
   groupSlug,
+  isGlobal,
   factions,
   loading,
   error,
@@ -124,6 +127,8 @@ export function PreferencesView({
           </div>
         )
       })}
+
+      <MatchupMatrix groupSlug={groupSlug} isGlobal={isGlobal} factions={factions} />
     </div>
   )
 }
