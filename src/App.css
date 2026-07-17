@@ -369,6 +369,13 @@
   color: var(--accent-gold);
 }
 
+.tier-view-hint {
+  margin: -4px 2px 0;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
 .tier-list {
   display: flex;
   flex-direction: column;
@@ -438,6 +445,21 @@
   height: 15px;
   color: var(--accent);
   flex-shrink: 0;
+}
+
+.tier-chip__name {
+  font-weight: 600;
+}
+
+.tier-chip__dispo {
+  color: var(--accent);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding-left: 6px;
+  margin-left: 2px;
+  border-left: 1px solid var(--border);
 }
 
 /* Preferences ("My Factions") */
@@ -562,6 +584,20 @@
   border-radius: 12px;
   background: var(--surface);
   padding: 12px 14px;
+  /* Each item animates in as it mounts; on a live vote only the new (top)
+     item is freshly mounted, so it slides/fades in while the rest stay put. */
+  animation: feed-item-in 0.35s ease both;
+}
+
+@keyframes feed-item-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .feed-item__header {
@@ -640,5 +676,30 @@
 
   .app__header h1 {
     font-size: 2rem;
+  }
+}
+
+/* View Transitions: tier chips (tagged with view-transition-name) glide to
+   their new positions when the ranking updates from a live vote or when the
+   Aggregate/By Disposition toggle is switched. Keep the transition quick and
+   don't cross-fade the whole page — only the named chips animate. */
+::view-transition-group(*) {
+  animation-duration: 0.3s;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .feed-item {
+    animation: none;
+  }
+
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
   }
 }
