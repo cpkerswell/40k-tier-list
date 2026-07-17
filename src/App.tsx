@@ -6,7 +6,7 @@ import { VoteView } from './components/VoteView'
 import { VoterNameControl } from './components/VoterNameControl'
 import { useFactions } from './hooks/useFactions'
 import { getShowDispositions, setShowDispositions } from './lib/dispositions'
-import { getGroupSlugFromLocation } from './lib/group'
+import { DEFAULT_GROUP_SLUG, getGroupSlugFromLocation } from './lib/group'
 import { getVoterName, setVoterName } from './lib/identity'
 import { getKnownFactionIds, toggleKnownFaction } from './lib/preferences'
 import './App.css'
@@ -15,8 +15,11 @@ type Tab = 'vote' | 'factions' | 'tiers'
 
 function App() {
   const [groupSlug] = useState<string>(() => getGroupSlugFromLocation())
+  // Root (no slug) is the global page: it shows an aggregate roundup across
+  // all groups, while voting still writes to the 'default' group.
+  const isGlobal = groupSlug === DEFAULT_GROUP_SLUG
   const [tab, setTab] = useState<Tab>('vote')
-  const { factions, loading, error, refetch } = useFactions(groupSlug)
+  const { factions, loading, error, refetch } = useFactions(groupSlug, isGlobal)
   const [knownFactionIds, setKnownFactionIds] = useState<Set<string>>(() =>
     getKnownFactionIds(groupSlug),
   )
@@ -113,8 +116,19 @@ function App() {
         )}
         {tab === 'tiers' && (
           <div className="tiers-screen">
-            <TierListView groupSlug={groupSlug} factions={factions} loading={loading} error={error} />
-            <ActivityFeed groupSlug={groupSlug} factions={factions} onNewVote={refetch} />
+            <TierListView
+              groupSlug={groupSlug}
+              isGlobal={isGlobal}
+              factions={factions}
+              loading={loading}
+              error={error}
+            />
+            <ActivityFeed
+              groupSlug={groupSlug}
+              isGlobal={isGlobal}
+              factions={factions}
+              onNewVote={refetch}
+            />
           </div>
         )}
       </main>

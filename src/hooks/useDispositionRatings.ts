@@ -15,7 +15,10 @@ interface UseDispositionRatingsResult {
   error: string | null
 }
 
-export function useDispositionRatings(groupSlug: string): UseDispositionRatingsResult {
+export function useDispositionRatings(
+  groupSlug: string,
+  isGlobal: boolean,
+): UseDispositionRatingsResult {
   const [dispositionRatings, setDispositionRatings] = useState<DispositionRating[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -25,9 +28,10 @@ export function useDispositionRatings(groupSlug: string): UseDispositionRatingsR
     setLoading(true)
 
     async function load() {
-      const { data, error: fetchError } = await supabase.rpc('disposition_ratings_for_group', {
-        p_group_slug: groupSlug,
-      })
+      // Global (root) page aggregates disposition ratings across all groups.
+      const { data, error: fetchError } = isGlobal
+        ? await supabase.rpc('disposition_ratings_aggregate')
+        : await supabase.rpc('disposition_ratings_for_group', { p_group_slug: groupSlug })
 
       if (!active) return
       if (fetchError) {
@@ -47,7 +51,7 @@ export function useDispositionRatings(groupSlug: string): UseDispositionRatingsR
     return () => {
       active = false
     }
-  }, [groupSlug])
+  }, [groupSlug, isGlobal])
 
   return { dispositionRatings, loading, error }
 }

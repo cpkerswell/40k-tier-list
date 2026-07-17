@@ -12,6 +12,7 @@ interface TierChipAccentStyle extends CSSProperties {
 
 interface TierListViewProps {
   groupSlug: string
+  isGlobal: boolean
   factions: Faction[]
   loading: boolean
   error: string | null
@@ -35,9 +36,9 @@ interface TierEntry {
   faction: Faction
 }
 
-export function TierListView({ groupSlug, factions, loading, error }: TierListViewProps) {
+export function TierListView({ groupSlug, isGlobal, factions, loading, error }: TierListViewProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('aggregate')
-  const { dispositionRatings } = useDispositionRatings(groupSlug)
+  const { dispositionRatings } = useDispositionRatings(groupSlug, isGlobal)
 
   const entries = useMemo((): TierEntry[] => {
     if (viewMode === 'aggregate') {

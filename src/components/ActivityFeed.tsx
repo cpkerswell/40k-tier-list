@@ -10,6 +10,7 @@ import { TierPill } from './TierPill'
 
 interface ActivityFeedProps {
   groupSlug: string
+  isGlobal: boolean
   factions: Faction[]
   onNewVote?: () => void
 }
@@ -98,7 +99,7 @@ function computeTierShift(factions: Faction[], vote: VoteRecord): TierShift | nu
   return { winnerBefore, winnerAfter, loserBefore, loserAfter }
 }
 
-export function ActivityFeed({ groupSlug, factions, onNewVote }: ActivityFeedProps) {
+export function ActivityFeed({ groupSlug, isGlobal, factions, onNewVote }: ActivityFeedProps) {
   const [votes, setVotes] = useState<VoteRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -107,13 +108,16 @@ export function ActivityFeed({ groupSlug, factions, onNewVote }: ActivityFeedPro
     let active = true
     setLoading(true)
 
+    const columns =
+      'id, winner_id, loser_id, winner_elo_before, loser_elo_before, winner_elo_after, loser_elo_after, voter_name, winner_disposition, loser_disposition, created_at'
+
     async function loadInitial() {
-      const { data, error: fetchError } = await supabase
-        .from('votes')
-        .select(
-          'id, winner_id, loser_id, winner_elo_before, loser_elo_before, winner_elo_after, loser_elo_after, voter_name, winner_disposition, loser_disposition, created_at',
-        )
-        .eq('group_slug', groupSlug)
+      // Global (root) feed shows votes from every group; a named group shows
+      // only its own.
+      let query = supabase.from('votes').select(columns)
+      if (!isGlobal) query = query.eq('group_slug', groupSlug)
+
+      const { data, error: fetchError } = await query
         .order('created_at', { ascending: false })
         .limit(FEED_LIMIT)
 
@@ -129,15 +133,17 @@ export function ActivityFeed({ groupSlug, factions, onNewVote }: ActivityFeedPro
     loadInitial()
 
     const channel = supabase
-      .channel(`votes-feed-${groupSlug}`)
+      .channel(`votes-feed-${isGlobal ? 'global' : groupSlug}`)
       .on(
         'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'votes',
-          filter: `group_slug=eq.${groupSlug}`,
-        },
+        isGlobal
+          ? { event: 'INSERT', schema: 'public', table: 'votes' }
+          : {
+              event: 'INSERT',
+              schema: 'public',
+              table: 'votes',
+              filter: `group_slug=eq.${groupSlug}`,
+            },
         (payload) => {
           const newVote = payload.new as VoteRecord
           setVotes((previous) => [newVote, ...previous].slice(0, FEED_LIMIT))
@@ -150,7 +156,7 @@ export function ActivityFeed({ groupSlug, factions, onNewVote }: ActivityFeedPro
       active = false
       supabase.removeChannel(channel)
     }
-  }, [groupSlug, onNewVote])
+  }, [groupSlug, isGlobal, onNewVote])
 
   const factionById = new Map(factions.map((faction) => [faction.id, faction]))
 

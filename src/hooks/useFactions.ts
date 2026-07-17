@@ -9,16 +9,18 @@ interface UseFactionsResult {
   refetch: () => Promise<void>
 }
 
-export function useFactions(groupSlug: string): UseFactionsResult {
+export function useFactions(groupSlug: string, isGlobal: boolean): UseFactionsResult {
   const [factions, setFactions] = useState<Faction[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   const refetch = useCallback(async () => {
     setLoading(true)
-    const { data, error: fetchError } = await supabase.rpc('factions_for_group', {
-      p_group_slug: groupSlug,
-    })
+    // Global (root) page shows a combined ranking across all groups; a named
+    // group shows only its own ratings.
+    const { data, error: fetchError } = isGlobal
+      ? await supabase.rpc('factions_aggregate')
+      : await supabase.rpc('factions_for_group', { p_group_slug: groupSlug })
 
     if (fetchError) {
       setError(fetchError.message)
@@ -27,7 +29,7 @@ export function useFactions(groupSlug: string): UseFactionsResult {
       setFactions(data ?? [])
     }
     setLoading(false)
-  }, [groupSlug])
+  }, [groupSlug, isGlobal])
 
   useEffect(() => {
     refetch()
