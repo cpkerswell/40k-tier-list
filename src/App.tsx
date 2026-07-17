@@ -5,7 +5,7 @@ import { TierListView } from './components/TierListView'
 import { VoteView } from './components/VoteView'
 import { VoterNameControl } from './components/VoterNameControl'
 import { useFactions } from './hooks/useFactions'
-import { DEFAULT_GROUP_SLUG, getGroupSlugFromLocation } from './lib/group'
+import { getGroupSlugFromLocation } from './lib/group'
 import { getVoterName, setVoterName } from './lib/identity'
 import { getKnownFactionIds, toggleKnownFaction } from './lib/preferences'
 import './App.css'
@@ -37,11 +37,6 @@ function App() {
           Pick the stronger faction in each match-up — every vote updates that faction&rsquo;s
           Elo rating and reshapes the S&ndash;D tier list.
         </p>
-        {groupSlug !== DEFAULT_GROUP_SLUG && (
-          <p className="app__group-badge">
-            Group: <strong>{groupSlug}</strong> — votes here are separate from the main list
-          </p>
-        )}
         <VoterNameControl name={voterName} onChange={handleNameChange} />
       </header>
 
