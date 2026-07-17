@@ -4,6 +4,7 @@ import { hasVotedOnPair } from './voteHistory'
 const INITIAL_RANK_WINDOW = 3
 
 function findWindowedPair(
+  groupSlug: string,
   factionsSortedByEloDesc: Faction[],
   isEligiblePair: (indexA: number, indexB: number) => boolean,
 ): [Faction, Faction] | null {
@@ -19,7 +20,7 @@ function findWindowedPair(
 
         const factionA = factionsSortedByEloDesc[i]
         const factionB = factionsSortedByEloDesc[j]
-        if (!hasVotedOnPair(factionA.id, factionB.id)) {
+        if (!hasVotedOnPair(groupSlug, factionA.id, factionB.id)) {
           candidates.push([i, j])
         }
       }
@@ -43,6 +44,7 @@ function findWindowedPair(
  * single open-pool search.
  */
 export function pickMatchup(
+  groupSlug: string,
   factionsSortedByEloDesc: Faction[],
   preferredFactionIds?: Set<string>,
 ): [Faction, Faction] | null {
@@ -53,15 +55,23 @@ export function pickMatchup(
     const isKnown = (index: number) => preferred.has(factionsSortedByEloDesc[index].id)
 
     if (preferred.size >= 2) {
-      const bothKnown = findWindowedPair(factionsSortedByEloDesc, (i, j) => isKnown(i) && isKnown(j))
+      const bothKnown = findWindowedPair(
+        groupSlug,
+        factionsSortedByEloDesc,
+        (i, j) => isKnown(i) && isKnown(j),
+      )
       if (bothKnown) return bothKnown
     }
 
-    const oneKnown = findWindowedPair(factionsSortedByEloDesc, (i, j) => isKnown(i) || isKnown(j))
+    const oneKnown = findWindowedPair(
+      groupSlug,
+      factionsSortedByEloDesc,
+      (i, j) => isKnown(i) || isKnown(j),
+    )
     if (oneKnown) return oneKnown
   }
 
-  return findWindowedPair(factionsSortedByEloDesc, () => true)
+  return findWindowedPair(groupSlug, factionsSortedByEloDesc, () => true)
 }
 
 /**
@@ -69,8 +79,11 @@ export function pickMatchup(
  * priority entirely. Used as an escape hatch when a champion streak (or the
  * known-faction phase order) keeps surfacing the same faction over and over.
  */
-export function pickRandomMatchup(factionsSortedByEloDesc: Faction[]): [Faction, Faction] | null {
-  return findWindowedPair(factionsSortedByEloDesc, () => true)
+export function pickRandomMatchup(
+  groupSlug: string,
+  factionsSortedByEloDesc: Faction[],
+): [Faction, Faction] | null {
+  return findWindowedPair(groupSlug, factionsSortedByEloDesc, () => true)
 }
 
 /**
@@ -78,6 +91,7 @@ export function pickRandomMatchup(factionsSortedByEloDesc: Faction[]): [Faction,
  * searching outward in both rank directions at once.
  */
 function findNextOpponentForChampion(
+  groupSlug: string,
   factionsSortedByEloDesc: Faction[],
   championId: string,
 ): Faction | null {
@@ -92,7 +106,7 @@ function findNextOpponentForChampion(
       (index) => index >= 0 && index < total,
     )
     const unfaced = candidateIndexes.filter(
-      (index) => !hasVotedOnPair(champion.id, factionsSortedByEloDesc[index].id),
+      (index) => !hasVotedOnPair(groupSlug, champion.id, factionsSortedByEloDesc[index].id),
     )
     if (unfaced.length > 0) {
       const chosenIndex = unfaced[Math.floor(Math.random() * unfaced.length)]
@@ -123,6 +137,7 @@ export interface MatchupSelection {
  * moving the mouse.
  */
 export function pickNextMatchup(
+  groupSlug: string,
   factionsSortedByEloDesc: Faction[],
   preferredFactionIds: Set<string>,
   championId: string | null,
@@ -132,7 +147,9 @@ export function pickNextMatchup(
 
   if (championId) {
     const champion = factionsSortedByEloDesc.find((faction) => faction.id === championId)
-    const opponent = champion ? findNextOpponentForChampion(factionsSortedByEloDesc, championId) : null
+    const opponent = champion
+      ? findNextOpponentForChampion(groupSlug, factionsSortedByEloDesc, championId)
+      : null
 
     if (champion && opponent) {
       const pair: [Faction, Faction] =
@@ -146,7 +163,7 @@ export function pickNextMatchup(
     }
   }
 
-  const fresh = pickMatchup(factionsSortedByEloDesc, preferredFactionIds)
+  const fresh = pickMatchup(groupSlug, factionsSortedByEloDesc, preferredFactionIds)
   if (!fresh) return null
 
   return {

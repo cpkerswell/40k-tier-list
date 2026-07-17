@@ -9,6 +9,7 @@ import { FactionIcon } from './icons'
 import { TierPill } from './TierPill'
 
 interface ActivityFeedProps {
+  groupSlug: string
   factions: Faction[]
   onNewVote?: () => void
 }
@@ -95,13 +96,14 @@ function computeTierShift(factions: Faction[], vote: VoteRecord): TierShift | nu
   return { winnerBefore, winnerAfter, loserBefore, loserAfter }
 }
 
-export function ActivityFeed({ factions, onNewVote }: ActivityFeedProps) {
+export function ActivityFeed({ groupSlug, factions, onNewVote }: ActivityFeedProps) {
   const [votes, setVotes] = useState<VoteRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     let active = true
+    setLoading(true)
 
     async function loadInitial() {
       const { data, error: fetchError } = await supabase
@@ -109,6 +111,7 @@ export function ActivityFeed({ factions, onNewVote }: ActivityFeedProps) {
         .select(
           'id, winner_id, loser_id, winner_elo_before, loser_elo_before, winner_elo_after, loser_elo_after, voter_name, created_at',
         )
+        .eq('group_slug', groupSlug)
         .order('created_at', { ascending: false })
         .limit(FEED_LIMIT)
 
@@ -124,10 +127,15 @@ export function ActivityFeed({ factions, onNewVote }: ActivityFeedProps) {
     loadInitial()
 
     const channel = supabase
-      .channel('votes-feed')
+      .channel(`votes-feed-${groupSlug}`)
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'votes' },
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'votes',
+          filter: `group_slug=eq.${groupSlug}`,
+        },
         (payload) => {
           const newVote = payload.new as VoteRecord
           setVotes((previous) => [newVote, ...previous].slice(0, FEED_LIMIT))
@@ -140,7 +148,7 @@ export function ActivityFeed({ factions, onNewVote }: ActivityFeedProps) {
       active = false
       supabase.removeChannel(channel)
     }
-  }, [onNewVote])
+  }, [groupSlug, onNewVote])
 
   const factionById = new Map(factions.map((faction) => [faction.id, faction]))
 

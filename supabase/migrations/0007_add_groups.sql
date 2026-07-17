@@ -1,20 +1,11 @@
--- 40K Tier List schema
--- Run this in the Supabase SQL Editor (Project -> SQL Editor -> New query).
+-- Adds support for isolated per-group voting pools (e.g. /groupA), so a
+-- shared URL can give a specific set of players their own Elo/vote history
+-- without affecting anyone else's. The existing (root-URL) data becomes the
+-- implicit 'default' group.
 
-create extension if not exists "pgcrypto";
-
-create table if not exists factions (
-  id uuid primary key default gen_random_uuid(),
-  name text not null unique,
-  faction_type text not null check (faction_type in ('Imperium', 'Chaos', 'Xenos')),
-  created_at timestamptz not null default now()
-);
-
--- Elo ratings are scoped per group (e.g. /groupA gets its own isolated
--- pool), not stored directly on factions. Rows are created lazily by
--- record_vote only for factions that have actually been voted on within a
--- given group; factions_for_group() below defaults everything else to
--- 1500/0 rather than requiring every faction to be pre-seeded per group.
+-- 1. New group-scoped ratings table. Rows are created lazily (see
+--    record_vote below) only for factions that have actually been voted on
+--    within a given group; factions_for_group() defaults everything else.
 create table if not exists group_ratings (
   group_slug text not null,
   faction_id uuid not null references factions (id) on delete cascade,
@@ -25,24 +16,33 @@ create table if not exists group_ratings (
 
 create index if not exists group_ratings_group_slug_idx on group_ratings (group_slug);
 
-create table if not exists votes (
-  id uuid primary key default gen_random_uuid(),
-  winner_id uuid not null references factions (id) on delete cascade,
-  loser_id uuid not null references factions (id) on delete cascade,
-  winner_elo_before double precision not null,
-  loser_elo_before double precision not null,
-  winner_elo_after double precision not null,
-  loser_elo_after double precision not null,
-  voter_name text check (voter_name is null or char_length(voter_name) <= 40),
-  group_slug text not null default 'default',
-  created_at timestamptz not null default now()
-);
+alter table group_ratings enable row level security;
 
-create index if not exists votes_winner_id_idx on votes (winner_id);
-create index if not exists votes_loser_id_idx on votes (loser_id);
+do $$
+begin
+  if not exists (
+    select 1 from pg_policies
+    where tablename = 'group_ratings' and policyname = 'Public can read group ratings'
+  ) then
+    create policy "Public can read group ratings" on group_ratings for select using (true);
+  end if;
+end $$;
+
+-- 2. Carry over the existing global ratings as the 'default' group's ratings.
+insert into group_ratings (group_slug, faction_id, elo_rating, games_played)
+select 'default', id, elo_rating, games_played from factions
+on conflict (group_slug, faction_id) do nothing;
+
+-- 3. Tag existing (and future) votes with the group they belong to.
+alter table votes add column if not exists group_slug text not null default 'default';
 create index if not exists votes_group_slug_idx on votes (group_slug);
 
--- Read helper: every faction plus its rating within one group.
+-- 4. Ratings now live in group_ratings, not directly on factions.
+alter table factions drop column if exists elo_rating;
+alter table factions drop column if exists games_played;
+
+-- 5. Read helper: every faction plus its rating within one group, defaulting
+--    unrated factions to 1500/0 rather than requiring a pre-seeded row.
 create or replace function factions_for_group(p_group_slug text)
 returns table (
   id uuid,
@@ -66,10 +66,13 @@ as $$
   order by coalesce(gr.elo_rating, 1500) desc;
 $$;
 
--- Records a single head-to-head vote and updates both factions' Elo (within
--- the given group) atomically. Runs as SECURITY DEFINER so the anon key
--- never needs direct UPDATE access to group_ratings/votes -- all rating
--- math happens here, server-side, in one place.
+grant execute on function factions_for_group(text) to anon;
+
+-- 6. record_vote now reads/writes group_ratings for the given group_slug
+--    (defaulting to 'default' for any client that hasn't updated yet), and
+--    tags the inserted vote row with that group.
+drop function if exists record_vote(uuid, uuid, text);
+
 create or replace function record_vote(
   p_winner_id uuid,
   p_loser_id uuid,
@@ -111,8 +114,6 @@ begin
     raise exception 'faction not found';
   end if;
 
-  -- Higher K-factor while a faction still has few votes, so early opinions
-  -- move its rating faster; settles down once it has enough games logged.
   k_winner := case when winner_games < 30 then 40 else 20 end;
   k_loser := case when loser_games < 30 then 40 else 20 end;
 
@@ -139,21 +140,4 @@ begin
 end;
 $$;
 
-alter table factions enable row level security;
-alter table group_ratings enable row level security;
-alter table votes enable row level security;
-
--- Anyone can read faction metadata, per-group standings, and vote history.
-create policy "Public can read factions" on factions for select using (true);
-create policy "Public can read group ratings" on group_ratings for select using (true);
-create policy "Public can read votes" on votes for select using (true);
-
--- No insert/update/delete policies are defined for these tables, so the
--- anon key cannot write to them directly via the REST API. The only way to
--- change a rating is through record_vote() / factions_for_group(), exposed
--- below.
-grant execute on function factions_for_group(text) to anon;
 grant execute on function record_vote(uuid, uuid, text, text) to anon;
-
--- Streams new votes to every connected browser for the live activity feed.
-alter publication supabase_realtime add table votes;

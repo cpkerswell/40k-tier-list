@@ -1,8 +1,10 @@
-const STORAGE_KEY = '40k-tier-list:known-factions'
+function storageKey(groupSlug: string): string {
+  return `40k-tier-list:${groupSlug}:known-factions`
+}
 
-function readKnownFactionIds(): Set<string> {
+function readKnownFactionIds(groupSlug: string): Set<string> {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
+    const raw = localStorage.getItem(storageKey(groupSlug))
     if (!raw) return new Set()
     const parsed: unknown = JSON.parse(raw)
     return new Set(Array.isArray(parsed) ? (parsed as string[]) : [])
@@ -11,21 +13,21 @@ function readKnownFactionIds(): Set<string> {
   }
 }
 
-function writeKnownFactionIds(factionIds: Set<string>): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(factionIds)))
+function writeKnownFactionIds(groupSlug: string, factionIds: Set<string>): void {
+  localStorage.setItem(storageKey(groupSlug), JSON.stringify(Array.from(factionIds)))
 }
 
-export function getKnownFactionIds(): Set<string> {
-  return readKnownFactionIds()
+export function getKnownFactionIds(groupSlug: string): Set<string> {
+  return readKnownFactionIds(groupSlug)
 }
 
-export function toggleKnownFaction(factionId: string): Set<string> {
-  const factionIds = readKnownFactionIds()
+export function toggleKnownFaction(groupSlug: string, factionId: string): Set<string> {
+  const factionIds = readKnownFactionIds(groupSlug)
   if (factionIds.has(factionId)) {
     factionIds.delete(factionId)
   } else {
     factionIds.add(factionId)
   }
-  writeKnownFactionIds(factionIds)
+  writeKnownFactionIds(groupSlug, factionIds)
   return factionIds
 }

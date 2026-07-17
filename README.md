@@ -107,6 +107,13 @@ the LAN address it prints instead.
 - **Tiers** (`src/lib/tiers.ts`): factions are bucketed into S/A/B/C/D by rank
   percentile (top 10% = S, next 20% = A, next 40% = B, next 20% = C, bottom 10% = D),
   so tiers stay populated regardless of how spread out the Elo ratings are.
+- **Groups** (`src/lib/group.ts`): visiting `/<slug>` (e.g. `/groupA`) gives that
+  URL its own fully isolated voting pool — separate Elo, tier list, activity
+  feed, and repeat-vote history — without affecting the root URL or any other
+  group. New slugs need no setup; they're created the first time anyone
+  visits. Ratings live in the `group_ratings` table, keyed by
+  `(group_slug, faction_id)`, defaulting to 1500/0 for any faction nobody in
+  that group has voted on yet (see `factions_for_group` in `schema.sql`).
 
 ## Project structure
 

@@ -28,6 +28,17 @@
   line-height: 1.4;
 }
 
+.app__group-badge {
+  margin: 10px auto 0;
+  max-width: 46ch;
+  color: var(--accent-gold);
+  font-size: 0.8rem;
+}
+
+.app__group-badge strong {
+  text-transform: capitalize;
+}
+
 /* Voter name */
 
 .voter-name {

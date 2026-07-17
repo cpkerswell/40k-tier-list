@@ -14,6 +14,7 @@ import { FactionCard } from './FactionCard'
 import { TierPill } from './TierPill'
 
 interface VoteViewProps {
+  groupSlug: string
   factions: Faction[]
   loading: boolean
   error: string | null
@@ -37,6 +38,7 @@ interface PendingImpact {
 }
 
 export function VoteView({
+  groupSlug,
   factions,
   loading,
   error,
@@ -59,10 +61,10 @@ export function VoteView({
   // championId, clobbering the manual pick with a fresh priority-based one.
   useEffect(() => {
     if (factions.length >= 2) {
-      setSelection(pickNextMatchup(factions, knownFactionIds, championId, championSlot))
+      setSelection(pickNextMatchup(groupSlug, factions, knownFactionIds, championId, championSlot))
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [factions, knownFactionIds])
+  }, [groupSlug, factions, knownFactionIds])
 
   // Fires once `factions` has been refetched after a vote, so we can compare
   // tier placement before vs. after using the freshly recalculated Elo order.
@@ -105,6 +107,7 @@ export function VoteView({
       p_winner_id: winner.id,
       p_loser_id: loser.id,
       p_voter_name: voterName,
+      p_group_slug: groupSlug,
     })
 
     if (rpcError) {
@@ -114,8 +117,8 @@ export function VoteView({
       return
     }
 
-    recordVotedPair(winner.id, loser.id)
-    recordWinOutcome(winner, loser)
+    recordVotedPair(groupSlug, winner.id, loser.id)
+    recordWinOutcome(groupSlug, winner, loser)
 
     if (!selection.isBothKnown) {
       setChampionId(winner.id)
@@ -130,12 +133,12 @@ export function VoteView({
     if (submitting || !selection) return
 
     const [factionA, factionB] = selection.matchup
-    recordVotedPair(factionA.id, factionB.id)
-    recordDrawOutcome(factionA, factionB)
+    recordVotedPair(groupSlug, factionA.id, factionB.id)
+    recordDrawOutcome(groupSlug, factionA, factionB)
     // championId/championSlot are intentionally left untouched: a draw
     // carries the reigning champion forward, in the same slot, instead of
     // resetting the streak.
-    setSelection(pickNextMatchup(factions, knownFactionIds, championId, championSlot))
+    setSelection(pickNextMatchup(groupSlug, factions, knownFactionIds, championId, championSlot))
   }
 
   function handleShuffle() {
@@ -144,7 +147,7 @@ export function VoteView({
     // and ignores known-faction priority entirely, so it actually breaks
     // away from a faction the phase order keeps resurfacing.
     setChampionId(null)
-    const randomPair = pickRandomMatchup(factions)
+    const randomPair = pickRandomMatchup(groupSlug, factions)
     setSelection(randomPair ? { matchup: randomPair, isBothKnown: true } : null)
   }
 
@@ -174,14 +177,14 @@ export function VoteView({
         <FactionCard
           faction={factionA}
           disabled={submitting}
-          lastOutcome={getLastOutcomeForFaction(factionA.id)}
+          lastOutcome={getLastOutcomeForFaction(groupSlug, factionA.id)}
           onSelect={() => handleVote(factionA, factionB)}
         />
         <span className="matchup__vs">VS</span>
         <FactionCard
           faction={factionB}
           disabled={submitting}
-          lastOutcome={getLastOutcomeForFaction(factionB.id)}
+          lastOutcome={getLastOutcomeForFaction(groupSlug, factionB.id)}
           onSelect={() => handleVote(factionB, factionA)}
         />
       </div>

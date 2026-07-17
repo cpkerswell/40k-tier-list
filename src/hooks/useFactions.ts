@@ -9,17 +9,16 @@ interface UseFactionsResult {
   refetch: () => Promise<void>
 }
 
-export function useFactions(): UseFactionsResult {
+export function useFactions(groupSlug: string): UseFactionsResult {
   const [factions, setFactions] = useState<Faction[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   const refetch = useCallback(async () => {
     setLoading(true)
-    const { data, error: fetchError } = await supabase
-      .from('factions')
-      .select('id, name, faction_type, elo_rating, games_played')
-      .order('elo_rating', { ascending: false })
+    const { data, error: fetchError } = await supabase.rpc('factions_for_group', {
+      p_group_slug: groupSlug,
+    })
 
     if (fetchError) {
       setError(fetchError.message)
@@ -28,7 +27,7 @@ export function useFactions(): UseFactionsResult {
       setFactions(data ?? [])
     }
     setLoading(false)
-  }, [])
+  }, [groupSlug])
 
   useEffect(() => {
     refetch()
