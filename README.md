@@ -91,6 +91,24 @@ npm run dev
 Open the printed local URL — on your phone, use `npm run dev -- --host` and open
 the LAN address it prints instead.
 
+## Deploying (Vercel)
+
+Git auto-deploy is **disabled** for `main` (via `vercel.json`'s
+`git.deploymentEnabled`). Vercel's build cache intermittently shipped a stale,
+incomplete bundle on Git-triggered deploys (env vars not inlined → blank page),
+and `VERCEL_FORCE_NO_BUILD_CACHE` didn't reliably prevent it. So production is
+released explicitly instead:
+
+```sh
+npm run deploy   # vercel --prod --force  +  post-deploy smoke test
+```
+
+`--force` skips the build cache (always produces the correct bundle). The smoke
+test (`npm run smoke [url]`) then fetches the deployed bundle and fails if the
+Supabase URL isn't inlined or the bundle is suspiciously small — the exact
+blank-page failure mode — retrying a few times to allow for alias propagation.
+Pushing to `main` still updates GitHub but no longer touches production.
+
 ## How it works
 
 - **Pairing** (`src/lib/pairing.ts`): factions are ranked by Elo, and each
