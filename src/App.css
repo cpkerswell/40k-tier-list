@@ -1,0 +1,376 @@
+.app {
+  width: 100%;
+  max-width: 640px;
+  min-height: 100vh;
+  padding: 20px 16px 48px;
+  display: flex;
+  flex-direction: column;
+}
+
+.app__header {
+  text-align: center;
+  padding: 12px 0 20px;
+}
+
+.app__header h1 {
+  margin: 0;
+  font-size: 1.6rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent-gold);
+}
+
+.app__subtitle {
+  margin: 6px auto 0;
+  max-width: 46ch;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+/* Tabs */
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 4px;
+  margin-bottom: 20px;
+}
+
+.tabs__tab {
+  flex: 1;
+  padding: 12px 6px;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.tabs__tab--active {
+  background: var(--surface-raised);
+  color: var(--accent-gold);
+}
+
+.app__main {
+  flex: 1;
+}
+
+/* Status messages */
+
+.status-message {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 40px 12px;
+  font-size: 1rem;
+}
+
+.status-message--error {
+  color: var(--danger);
+}
+
+/* Vote view */
+
+.vote-view {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 16px;
+}
+
+.vote-prompt {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.matchup {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+}
+
+.matchup__vs {
+  align-self: center;
+  color: var(--text-muted);
+  font-weight: 700;
+  font-size: 0.85rem;
+  letter-spacing: 0.1em;
+}
+
+.faction-card {
+  --accent: var(--accent-gold);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 140px;
+  padding: 24px 16px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  border-top: 4px solid var(--accent);
+  background: var(--surface);
+  cursor: pointer;
+  transition:
+    transform 0.1s ease,
+    background 0.15s ease;
+}
+
+.faction-card:active:not(:disabled) {
+  transform: scale(0.98);
+  background: var(--surface-raised);
+}
+
+.faction-card:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.faction-card__icon {
+  width: 34px;
+  height: 34px;
+  color: var(--accent);
+}
+
+.faction-card__type {
+  color: var(--accent);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.faction-card__name {
+  font-size: 1.25rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+/* Vote impact */
+
+.impact {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.impact__title {
+  margin: 0 0 2px;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+
+.impact__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.impact__name {
+  flex: 1;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.impact__arrow {
+  color: var(--text-muted);
+}
+
+.tier-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 6px;
+  border-radius: 8px;
+  font-weight: 800;
+  font-size: 0.85rem;
+  color: #101114;
+}
+
+.tier-pill--S {
+  background: #d4af37;
+}
+.tier-pill--A {
+  background: #7fbf7f;
+}
+.tier-pill--B {
+  background: #6fa8dc;
+}
+.tier-pill--C {
+  background: #c9924f;
+}
+.tier-pill--D {
+  background: #a15c5c;
+}
+
+/* Tier list */
+
+.tier-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tier-row {
+  display: flex;
+  align-items: stretch;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.tier-row__label {
+  flex: 0 0 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #101114;
+}
+
+.tier-row--S .tier-row__label {
+  background: #d4af37;
+}
+.tier-row--A .tier-row__label {
+  background: #7fbf7f;
+}
+.tier-row--B .tier-row__label {
+  background: #6fa8dc;
+}
+.tier-row--C .tier-row__label {
+  background: #c9924f;
+}
+.tier-row--D .tier-row__label {
+  background: #a15c5c;
+}
+
+.tier-row__factions {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+}
+
+.tier-chip {
+  --accent: #8a8a8a;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 999px;
+  padding: 6px 12px 6px 10px;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.tier-chip__icon {
+  width: 15px;
+  height: 15px;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+/* Preferences ("My Factions") */
+
+.preferences {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.preferences__intro {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.preferences__group-title {
+  margin: 0 0 10px;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+
+.preferences__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.preference-chip {
+  --accent: #8a8a8a;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 8px 14px;
+  background: var(--surface);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.preference-chip__icon {
+  width: 16px;
+  height: 16px;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.preference-chip--active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #101114;
+}
+
+.preference-chip--active .preference-chip__icon {
+  color: #101114;
+}
+
+/* Wider screens: show the match-up side by side */
+
+@media (min-width: 480px) {
+  .matchup {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .faction-card {
+    flex: 1;
+  }
+}
+
+@media (min-width: 640px) {
+  .app {
+    padding-top: 32px;
+  }
+
+  .app__header h1 {
+    font-size: 2rem;
+  }
+}
