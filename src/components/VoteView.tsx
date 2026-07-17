@@ -22,7 +22,7 @@ interface VoteViewProps {
   loading: boolean
   error: string | null
   knownFactionIds: Set<string>
-  voterName: string | null
+  voterName: string
   showDispositions: boolean
   onVoted: () => Promise<void>
 }

@@ -22,7 +22,7 @@ export function Leaderboard({ groupSlug, isGlobal }: LeaderboardProps) {
       <div className="leaderboard__list">
         {entries.slice(0, DISPLAY_LIMIT).map((entry, index) => {
           const rank = index + 1
-          const isYou = you !== null && entry.voter_name === you
+          const isYou = entry.voter_name === you
           return (
             <div
               key={entry.voter_name}

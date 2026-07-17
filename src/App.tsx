@@ -23,7 +23,7 @@ function App() {
   const [knownFactionIds, setKnownFactionIds] = useState<Set<string>>(() =>
     getKnownFactionIds(groupSlug),
   )
-  const [voterName, setVoterNameState] = useState<string | null>(() => getVoterName())
+  const [voterName, setVoterNameState] = useState<string>(() => getVoterName())
   const [showDispositions, setShowDispositionsState] = useState<boolean>(() => getShowDispositions())
 
   function handleToggleKnown(factionId: string) {

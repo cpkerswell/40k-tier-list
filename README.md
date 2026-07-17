@@ -119,6 +119,17 @@ Pushing to `main` still updates GitHub but no longer touches production.
 - **Elo updates** (`supabase/schema.sql`, `record_vote` function): run inside
   Postgres as a `SECURITY DEFINER` function so the browser's anon key never
   needs direct write access to the tables — it only ever calls `record_vote(winner_id, loser_id)`.
+- **Vote-spam mitigation** (same `record_vote` function): each side's K-factor
+  is divided by `(1 + how many of that voter's own last 10 votes in this group
+  already had this exact faction winning/losing)`. One voter repeatedly making
+  the same faction win (or lose) — deliberate spam or just enthusiastically
+  clicking through the "champion" gauntlet — has diminishing effect on the
+  shared rating rather than compounding. Needs no new columns or tracking ID;
+  it keys on `voter_name`, which every voter now has (`src/lib/identity.ts`
+  auto-generates a random one if they don't pick one), so anonymous voters are
+  covered too. Deliberately soft rather than an on/off ban — there's no login,
+  so a determined bad actor can always reset and start over; this only blunts
+  casual spam.
 - **Repeat-vote limiting** (`src/lib/voteHistory.ts`): each voted pair is stored
   in `localStorage` (no login, no server-side tracking). Once you've voted on a
   pair, it won't be shown again on that device/browser.

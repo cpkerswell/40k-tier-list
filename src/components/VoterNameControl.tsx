@@ -1,13 +1,13 @@
 import { useState } from 'react'
 
 interface VoterNameControlProps {
-  name: string | null
+  name: string
   onChange: (name: string) => void
 }
 
 export function VoterNameControl({ name, onChange }: VoterNameControlProps) {
   const [editing, setEditing] = useState(false)
-  const [draft, setDraft] = useState(name ?? '')
+  const [draft, setDraft] = useState(name)
 
   if (editing) {
     return (
@@ -40,11 +40,11 @@ export function VoterNameControl({ name, onChange }: VoterNameControlProps) {
       type="button"
       className="voter-name"
       onClick={() => {
-        setDraft(name ?? '')
+        setDraft(name)
         setEditing(true)
       }}
     >
-      {name ? `Voting as ${name}` : 'Add your name'}
+      Voting as {name}
     </button>
   )
 }

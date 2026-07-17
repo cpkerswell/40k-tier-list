@@ -195,6 +195,15 @@ $$;
 -- that was tagged with one. Runs as SECURITY DEFINER so the anon key never
 -- needs direct UPDATE access to the ratings tables -- all rating math
 -- happens here, server-side, in one place.
+--
+-- Anti-spam: divides each side's K-factor by (1 + how many of that voter's
+-- own last 10 votes in this group already had this exact faction winning /
+-- losing). Softens the effect of one voter repeatedly making the same
+-- faction win (or lose) in a burst -- deliberate spam or just enthusiastic
+-- "champion" gauntlet clicking, either way one voter's opinion shouldn't be
+-- able to dominate a shared, crowd-sourced ranking. Relies only on
+-- voter_name, which the client always populates now (auto-generating a
+-- random name if none is chosen) -- no separate tracking identifier needed.
 create or replace function record_vote(
   p_winner_id uuid,
   p_loser_id uuid,
@@ -224,10 +233,40 @@ declare
   d_winner_games integer;
   d_loser_elo double precision;
   d_loser_games integer;
+
+  recent_winner_wins integer := 0;
+  recent_loser_losses integer := 0;
+  winner_decay double precision;
+  loser_decay double precision;
 begin
   if p_winner_id = p_loser_id then
     raise exception 'winner and loser must be different factions';
   end if;
+
+  if p_voter_name is not null then
+    select count(*) into recent_winner_wins
+    from (
+      select winner_id
+      from votes
+      where group_slug = p_group_slug and voter_name = p_voter_name
+      order by created_at desc
+      limit 10
+    ) recent
+    where recent.winner_id = p_winner_id;
+
+    select count(*) into recent_loser_losses
+    from (
+      select loser_id
+      from votes
+      where group_slug = p_group_slug and voter_name = p_voter_name
+      order by created_at desc
+      limit 10
+    ) recent
+    where recent.loser_id = p_loser_id;
+  end if;
+
+  winner_decay := 1.0 / (1.0 + recent_winner_wins);
+  loser_decay := 1.0 / (1.0 + recent_loser_losses);
 
   -- Whole-faction rating: unchanged behavior, updates on every vote.
   insert into group_ratings (group_slug, faction_id)
@@ -246,8 +285,9 @@ begin
 
   -- Higher K-factor while a faction still has few votes, so early opinions
   -- move its rating faster; settles down once it has enough games logged.
-  k_winner := case when winner_games < 30 then 40 else 20 end;
-  k_loser := case when loser_games < 30 then 40 else 20 end;
+  -- Then scaled down further by that voter's own recent pattern (see above).
+  k_winner := (case when winner_games < 30 then 40 else 20 end) * winner_decay;
+  k_loser := (case when loser_games < 30 then 40 else 20 end) * loser_decay;
 
   expected_winner := 1.0 / (1.0 + power(10.0, (loser_elo - winner_elo) / 400.0));
   expected_loser := 1.0 / (1.0 + power(10.0, (winner_elo - loser_elo) / 400.0));
@@ -290,28 +330,28 @@ begin
   if p_winner_disposition is not null and p_loser_disposition is not null then
     update group_disposition_ratings
     set
-      elo_rating = d_winner_elo + (case when d_winner_games < 30 then 40 else 20 end)
+      elo_rating = d_winner_elo + ((case when d_winner_games < 30 then 40 else 20 end) * winner_decay)
         * (1 - (1.0 / (1.0 + power(10.0, (d_loser_elo - d_winner_elo) / 400.0)))),
       games_played = games_played + 1
     where group_slug = p_group_slug and faction_id = p_winner_id and disposition = p_winner_disposition;
 
     update group_disposition_ratings
     set
-      elo_rating = d_loser_elo + (case when d_loser_games < 30 then 40 else 20 end)
+      elo_rating = d_loser_elo + ((case when d_loser_games < 30 then 40 else 20 end) * loser_decay)
         * (0 - (1.0 / (1.0 + power(10.0, (d_winner_elo - d_loser_elo) / 400.0)))),
       games_played = games_played + 1
     where group_slug = p_group_slug and faction_id = p_loser_id and disposition = p_loser_disposition;
   elsif p_winner_disposition is not null then
     update group_disposition_ratings
     set
-      elo_rating = d_winner_elo + (case when d_winner_games < 30 then 40 else 20 end)
+      elo_rating = d_winner_elo + ((case when d_winner_games < 30 then 40 else 20 end) * winner_decay)
         * (1 - (1.0 / (1.0 + power(10.0, (loser_elo - d_winner_elo) / 400.0)))),
       games_played = games_played + 1
     where group_slug = p_group_slug and faction_id = p_winner_id and disposition = p_winner_disposition;
   elsif p_loser_disposition is not null then
     update group_disposition_ratings
     set
-      elo_rating = d_loser_elo + (case when d_loser_games < 30 then 40 else 20 end)
+      elo_rating = d_loser_elo + ((case when d_loser_games < 30 then 40 else 20 end) * loser_decay)
         * (0 - (1.0 / (1.0 + power(10.0, (winner_elo - d_loser_elo) / 400.0)))),
       games_played = games_played + 1
     where group_slug = p_group_slug and faction_id = p_loser_id and disposition = p_loser_disposition;
